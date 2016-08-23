@@ -8,13 +8,16 @@
     "version",
     "sync"
   ],
-  "contributors": [{
-    "name": "Louis-Dominique Dubeau",
-    "email": "ldd@lddubeau.com"
-  }, {
+  "contributors": [
+    {
+      "name": "Louis-Dominique Dubeau",
+      "email": "ldd@lddubeau.com"
+    },
+    {
       "name": "Alex Ciminian",
       "url": "http://improve.ro/"
-  }],
+    }
+  ],
   "license": "MIT",
   "engines": {
     "node": ">=0.10.0"
@@ -25,18 +28,26 @@
   },
   "main": "./index.js",
   "dependencies": {
+    "colors": "0.6.0-1",
     "optimist": "0.3.5",
     "semver": "1.1.2",
-    "uglify-js": "2.2.3",
-    "colors": "0.6.0-1"
+    "typescript": "^1.8.10",
+    "uglify-js": "2.2.3"
   },
   "devDependencies": {
-    "tap" : "~0.2.4"
+    "del": "^2.2.2",
+    "fs-extra": "^0.30.0",
+    "mockery": "^1.7.0",
+    "tap": "~0.2.4",
+    "typescript": "^1.8.10"
   },
   "bin": {
     "versync": "./bin/versync"
   },
-  "scripts" : {
-    "test" : "tap ./test/*.js --stderr"
+  "scripts": {
+    "test": "tap ./test/*.js --stderr"
+  },
+  "optionalDependencies": {
+    "typescript": "^1.8.10"
   }
 }

@@ -18,6 +18,14 @@ You can install it via `npm`:
 npm install -g versync
 ````
 
+Support for TypeScript is optional. If you want it, you need to also install `typescript`:
+
+````
+npm install -g typescript
+````
+
+Note that it is perfectly viable to install `versync` locally if you want.
+
 ## How to use it
 
 This utility uses `package.json` as the reference by which all other version numbers in the package are checked. If you don't have a `package.json` in the folder where you run it, it will give an error and break.

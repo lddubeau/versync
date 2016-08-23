@@ -3,6 +3,19 @@ var exec = require('child_process').exec
   , semver = require('semver')
   , patterns = require('./patterns');
 
+// We separate require("typescript") and require("./tspatterns") so that errors
+// with the latter are not disguised as problems with the typescript package.
+var typescript;
+try {
+  typescript = require("typescript");
+}
+catch (ex) {}
+
+var tspatterns;
+if (typescript) {
+  tspatterns = require("./tspatterns");
+}
+
 var DEFAULT_SEPARATOR = '\n'
   , DEFAULT_ENCODING = 'utf-8';
 
@@ -21,7 +34,7 @@ module.exports.getVersion = function (filename) {
 	var ext = getExtension(filename)
     , result;
 
-  if (!~['js', 'json'].indexOf(ext)) {
+  if (!~['js', 'json', 'ts'].indexOf(ext)) {
     throw new Error('unsupported extension ' + ext);
   }
 
@@ -30,7 +43,17 @@ module.exports.getVersion = function (filename) {
     data = '(' + data + ')';
   }
 
-  result = patterns.parse(data);
+  if (ext === 'json' || ext === 'js') {
+    result = patterns.parse(data);
+  }
+  else if (ext === "ts") {
+    if (!tspatterns) {
+      throw new Error("file " + filename + " is a TypeScript file but " +
+                      "the package `typescript` is not available; " +
+                      "please install it.");
+    }
+    result = tspatterns.parse(filename, data);
+  }
 
   return result;
 };
