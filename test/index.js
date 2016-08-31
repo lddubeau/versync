@@ -79,14 +79,14 @@ test('commiting files and creating tag', function(t) {
   });
 });
 
-test('running semver-sync', function (t) {
+test('running versync', function (t) {
   var options = {cwd: 'tmp'};
   t.plan(2);
 
   t.test(function (t) {
     t.plan(2);
     exec('./exec-test', function (error, stdout, sterr) {
-      exec('../../bin/semver-sync -v', options,
+      exec('../../bin/versync -v', options,
            function(error, stdout, stderr) {
         t.equal(error, null);
         t.equal(stdout.replace(/\033\[[0-9;]*m/g, ''), '[OK] Everything is in sync, the version number is 0.0.1.\n');
@@ -97,7 +97,7 @@ test('running semver-sync', function (t) {
   t.test(function (t) {
     t.plan(2);
     exec('./exec-invalid-test', function (error, stdout, sterr) {
-      exec('../../bin/semver-sync -v -s invalid.js', options,
+      exec('../../bin/versync -v -s invalid.js', options,
            function(error, stdout, stderr) {
         t.equal(error.code, 1);
         t.equal(stdout.replace(/\033\[[0-9;]*m/g, ''), '[ERROR] Missing or wrong semver number in invalid.js. Found: version\n');

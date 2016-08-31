@@ -16,7 +16,7 @@ var ERROR = '[ERROR] '.bold.red
 
 var argv = optimist
     .usage('Synchronizes version numbers accross package.json, component.json and other source files of your choosing.' +
-        '\n Usage: ' + 'semver-sync -s [source list] -b [release type].'.bold)
+        '\n Usage: ' + 'versync -s [source list] -b [release type].'.bold)
     .option('b', {
         alias: 'bump',
         describe: 'Bump the version number in package.json, component.json and all other specified source files. '
@@ -44,7 +44,7 @@ var argv = optimist
 
 
 if (argv.help || (!argv.verify && !argv.bump && !argv.tag)) {
-  console.log('Running ' + 'semver-sync'.bold.green + ' version ' + sync.version.bold.green + '.\n');
+  console.log('Running ' + 'versync'.bold.green + ' version ' + sync.version.bold.green + '.\n');
   console.log(optimist.help());
   process.exit(0);
 }

@@ -1,24 +1,27 @@
 {
-  "name": "semver-sync",
-  "version": "1.2.2",
+  "name": "versync",
+  "version": "2.0.0",
   "versionedSources": "index.js",
-  "description": "Utility that keeps version numbers in sync between package.json, component.json and an optional source file.",
+  "description": "Utility that keeps version numbers in sync between files.",
   "keywords": [
     "semver",
     "version",
     "sync"
   ],
-  "author": {
-    "name": "Alex Ciminian",
-    "url": "http://improve.ro/"
-  },
+  "contributors": [{
+    "name": "Louis-Dominique Dubeau",
+    "email": "ldd@lddubeau.com"
+  }, {
+      "name": "Alex Ciminian",
+      "url": "http://improve.ro/"
+  }],
   "license": "MIT",
   "engines": {
-    "node": ">=0.4.0"
+    "node": ">=0.10.0"
   },
   "repository": {
     "type": "git",
-    "url": "http://github.com/cimi/semver-sync.git"
+    "url": "http://github.com/lddubeau/versync.git"
   },
   "main": "./index.js",
   "dependencies": {
@@ -31,7 +34,7 @@
     "tap" : "~0.2.4"
   },
   "bin": {
-    "semver-sync": "./bin/semver-sync"
+    "versync": "./bin/versync"
   },
   "scripts" : {
     "test" : "tap ./test/*.js --stderr"

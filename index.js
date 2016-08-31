@@ -6,9 +6,9 @@ var exec = require('child_process').exec
 var DEFAULT_SEPARATOR = '\n'
   , DEFAULT_ENCODING = 'utf-8';
 
-var exports = module.exports = { name: 'semver-sync' };
+var exports = module.exports = { name: 'versync' };
 
-module.exports.version = '1.2.2';
+module.exports.version = '2.0.0';
 
 var getExtension = function (filename) {
   var parts = filename.split('.');

@@ -1,15 +1,21 @@
-# semver-sync
+# versync
 
-`semver-sync` is a node.js module that enables you to synchronize version numbers accross `package.json`, `component.json` and other source files of your choosing.
+`versync` is a node.js module that enables you to synchronize version numbers accross `package.json`, `component.json` and other source files of your choosing.
 
-[![Build Status](https://secure.travis-ci.org/cimi/semver-sync.png)](http://travis-ci.org/cimi/semver-sync)
+This software is a fork of [`semver-sync`](https://github.com/cimi/semver-sync). The fork was triggered by a desire to support TypeScript. A pull request was put it but after over a week without response I decided to fork because my own projects depend on the enhancement. Many thanks to Alex Ciminian for having produced and leading the development of `semver-sync`.
+
+## Supported Platforms
+
+`versync` supports Node.js 4 and over.
+
+Use [`semver-sync`](https://github.com/cimi/semver-sync) if you need similar functionality on earlier versions of Node.
 
 ## Installation
 
-You can install it via npm:
+You can install it via `npm`:
 
 ````
-npm install -g semver-sync
+npm install -g versync
 ````
 
 ## How to use it
@@ -29,40 +35,40 @@ The utility automatically checks `package.json` and `component.json`. If you hav
 Once that's done, you can check that everything's ok:
 
 ````terminal
-semver-sync -v
+versync -v
 [OK] Everything is in sync, with version number 1.2.3
 ````
 
 If you accidentally change the version number in one of the sources, or forget to update it, you'll see an error:
 
 ````
-semver-sync -v
+versync -v
 [ERROR] Version number is out of sync in component.json, mypackage.js.
 ````
 
 If you want to update the version number automatically in all the files, you can do:
 
 ````
-semver-sync -b
+versync -b
 [OK] Version number was updated to 1.2.4 in package.json, component.json, mypackage.js.
-semver-sync -b patch
+versync -b patch
 [OK] Version number was updated to 1.2.5 in package.json, component.json, mypackage.js.
-semver-sync -b minor
+versync -b minor
 [OK] Version number was updated to 1.3.0 in package.json, component.json, mypackage.js.
-semver-sync -b major
+versync -b major
 [OK] Version number was updated to 2.0.0 in package.json, component.json, mypackage.js.
-semver-sync -b 3.0.0-alpha1
+versync -b 3.0.0-alpha1
 [OK] Version number was updated to 3.0.1-alpha1 in package.json, component.json, mypackage.js.
-semver-sync -b 3.0.0-beta2
+versync -b 3.0.0-beta2
 [OK] Version number was updated to 3.0.1-beta2 in package.json, component.json, mypackage.js.
-semver-sync -b 3.0.0-rc1
+versync -b 3.0.0-rc1
 [OK] Version number was updated to 3.0.1-rc1 in package.json, component.json, mypackage.js.
 ````
 
 If you want to update the version number automatically in all the files, commit the changes and create a new git tag, you can do:
 
 ````
-semver-sync -t
+versync -t
 [OK] Version number was updated to 1.2.4 in package.json, component.json, mypackage.js.
 [OK] Files have been commited and tag v1.2.4 was created.
 ````
@@ -79,7 +85,7 @@ The binary uses [node-optimist](https://github.com/substack/node-optimist) to pa
 
 ## Console help
 
-Usage: **`semver-sync -s [source list] -b [release type]`**.
+Usage: **`versync -s [source list] -b [release type]`**.
 
 Options:
 
