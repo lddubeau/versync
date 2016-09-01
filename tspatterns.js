@@ -1,3 +1,5 @@
+/* global require module */
+"use strict";
 var ts = require("typescript");
 
 function getLine(sourceFile, node) {
@@ -5,11 +7,9 @@ function getLine(sourceFile, node) {
     .line + 1; // + 1 because it is 0-based by default.
 }
 
-
-
 var exports = module.exports = {};
 
-exports.parse = function (filename, data) {
+exports.parse = function parse(filename, data) {
   var sourceFile = ts.createSourceFile(filename, data);
   var statements = sourceFile.statements;
   for (var statementsIx = 0; statementsIx < statements.length; ++statementsIx) {
@@ -21,7 +21,7 @@ exports.parse = function (filename, data) {
     }
 
     var decls = statement.declarationList.declarations;
-    for (var declsIx = 0; declsIx < decls.length; ++declsIx)  {
+    for (var declsIx = 0; declsIx < decls.length; ++declsIx) {
       var node = decls[declsIx];
       if (node.kind !== ts.SyntaxKind.VariableDeclaration ||
           node.name.text !== "version") {
@@ -40,4 +40,6 @@ exports.parse = function (filename, data) {
       };
     }
   }
-}
+
+  return undefined;
+};
