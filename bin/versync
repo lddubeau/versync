@@ -4,16 +4,11 @@
 "use strict";
 var sync = require("../");
 var fs = require("fs");
-var path = require("path");
 var optimist = require("optimist");
 var semver = require("semver");
 require("colors");
 
 /* eslint-disable no-console */
-
-// Node.js: pre-0.8 it was path.existsSync; 0.8 and later it is
-// fs.existsSync
-var existsSync = fs.existsSync || path.existsSync;
 
 var ERROR = "[ERROR] ".bold.red;
 var SUCCESS = "[OK] ".bold.green;
@@ -74,7 +69,7 @@ if (argv.bump === true) {
   argv.bump = "patch";
 }
 
-if (!existsSync("package.json")) {
+if (!fs.existsSync("package.json")) {
   console.log(ERROR + "No package.json found in the current directory, exiting.");
   process.exit(1);
 }
@@ -84,7 +79,7 @@ var sources = (function makeSources() {
 
   // supporting both bower variants
   ["component.json", "bower.json"].forEach(function each(source) {
-    if (existsSync(source)) {
+    if (fs.existsSync(source)) {
       srcs.push(source);
     }
   });
