@@ -1,4 +1,4 @@
-/* global require module */
+/* global require exports */
 "use strict";
 var exec = require("child_process").exec;
 var fs = require("fs");
@@ -21,11 +21,11 @@ if (typescript) {
 var DEFAULT_SEPARATOR = "\n";
 var DEFAULT_ENCODING = "utf-8";
 
-module.exports = { name: "versync" };
+exports.name = "versync";
 
-module.exports.version = "2.0.0";
+exports.version = "2.0.0";
 
-module.exports.getVersion = function getVersion(filename) {
+exports.getVersion = function getVersion(filename) {
   var ext = path.extname(filename).slice(1); // Slice to remove the leading dot.
   var result;
 
@@ -53,9 +53,9 @@ module.exports.getVersion = function getVersion(filename) {
   return result;
 };
 
-module.exports.setVersion = function setVersion(arr, version) {
+exports.setVersion = function setVersion(arr, version) {
   arr.forEach(function each(filename) {
-    var current = module.exports.getVersion(filename);
+    var current = exports.getVersion(filename);
     var lines = fs.readFileSync(filename, DEFAULT_ENCODING)
           .split(DEFAULT_SEPARATOR);
     lines[current.line - 1] = lines[current.line - 1].replace(current.version,
@@ -64,7 +64,7 @@ module.exports.setVersion = function setVersion(arr, version) {
   });
 };
 
-module.exports.commitSourcesAndCreateTag = function commitSourcesAndCreateTag(
+exports.commitSourcesAndCreateTag = function commitSourcesAndCreateTag(
   arr, version, callback, options) {
   // eslint-disable-next-line no-shadow
   function addSources(callback) {
