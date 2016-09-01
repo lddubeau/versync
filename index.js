@@ -2,6 +2,7 @@
 "use strict";
 var exec = require("child_process").exec;
 var fs = require("fs");
+var path = require("path");
 var patterns = require("./patterns");
 
 // We separate require("typescript") and require("./tspatterns") so that errors
@@ -24,13 +25,8 @@ module.exports = { name: "versync" };
 
 module.exports.version = "2.0.0";
 
-function getExtension(filename) {
-  var parts = filename.split(".");
-  return parts.length > 1 ? parts.pop() : "";
-}
-
 module.exports.getVersion = function getVersion(filename) {
-  var ext = getExtension(filename);
+  var ext = path.extname(filename).slice(1); // Slice to remove the leading dot.
   var result;
 
   if (!~["js", "json", "ts"].indexOf(ext)) {
