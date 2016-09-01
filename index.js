@@ -25,6 +25,23 @@ exports.name = "versync";
 
 exports.version = "2.0.0";
 
+/**
+ * The exists function provided by fs has been deprecated. Hence this.
+ *
+ * @param {string} filePath The file we want to check.
+ *
+ * @returns {boolean} ``true`` if the file exists, ``false`` if not.
+ */
+exports.existsSync = function existsSync(filePath) {
+  try {
+    fs.statSync(filePath);
+    return true;
+  }
+  catch (ex) {
+    return false;
+  }
+};
+
 exports.getVersion = function getVersion(filename) {
   const ext = path.extname(filename).slice(1); // Slice to remove the leading dot.
   let result;

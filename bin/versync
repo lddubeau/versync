@@ -65,7 +65,7 @@ if (argv.bump === true) {
   argv.bump = "patch";
 }
 
-if (!fs.existsSync("package.json")) {
+if (!sync.existsSync("package.json")) {
   console.log(
     `${ERROR}No package.json found in the current directory, exiting.`);
   process.exit(1);
