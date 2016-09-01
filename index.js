@@ -29,16 +29,15 @@ exports.getVersion = function getVersion(filename) {
   var ext = path.extname(filename).slice(1); // Slice to remove the leading dot.
   var result;
 
-  if (!~["js", "json", "ts"].indexOf(ext)) {
+  if (["js", "json", "ts"].indexOf(ext) === -1) {
     throw new Error("unsupported extension " + ext);
   }
 
   var data = fs.readFileSync(filename, DEFAULT_ENCODING);
-  if (ext === "json") {
-    data = "(" + data + ")";
-  }
-
   if (ext === "json" || ext === "js") {
+    if (ext === "json") {
+      data = "(" + data + ")";
+    }
     result = patterns.parse(data);
   }
   else if (ext === "ts") {
