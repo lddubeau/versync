@@ -1,12 +1,12 @@
 /* global require */
 "use strict";
 
-var exec = require("child_process").exec;
-var test = require("tap").test;
-var sync = require("../");
-var del = require("del");
-var fs = require("fs-extra");
-var mockery = require("mockery");
+const exec = require("child_process").exec;
+const test = require("tap").test;
+const sync = require("../");
+const del = require("del");
+const fs = require("fs-extra");
+const mockery = require("mockery");
 
 function getVersion(filename) {
   return sync.getVersion(filename).version;
@@ -16,7 +16,7 @@ function getLine(filename) {
   return sync.getVersion(filename).line;
 }
 
-test("reading version numbers from simple text fixtures", function _test(t) {
+test("reading version numbers from simple text fixtures", (t) => {
   t.equal(getVersion("fixtures/package.json"), "0.0.1", "json");
   t.equal(getVersion("fixtures/assigned.js"), "0.0.7",
           "module.exports.version assignment");
@@ -31,8 +31,7 @@ test("reading version numbers from simple text fixtures", function _test(t) {
   t.end();
 });
 
-test("reading version numbers from ts data without typescript", function _test(
-  t) {
+test("reading version numbers from ts data without typescript", (t) => {
   mockery.enable({
     useCleanCache: true,
     warnOnUnregistered: false,
@@ -40,7 +39,7 @@ test("reading version numbers from ts data without typescript", function _test(
   try {
     mockery.registerSubstitute("typescript", "nonexistent___");
     mockery.registerAllowable("..");
-    var nots = require(".."); // eslint-disable-line global-require
+    const nots = require(".."); // eslint-disable-line global-require
     t.throws(nots.getVersion.bind(undefined, "fixtures/tsmodule.ts"),
              new Error("file fixtures/tsmodule.ts is a TypeScript file " +
                        "but the package `typescript` is not available; " +
@@ -54,7 +53,7 @@ test("reading version numbers from ts data without typescript", function _test(
 });
 
 
-test("reading version numbers from actual libraries", function _test(t) {
+test("reading version numbers from actual libraries", (t) => {
   t.equal(getVersion("fixtures/complete/topojson.js"), "0.0.10",
           "topojson.js parsed correctly.");
   t.equal(getVersion("fixtures/complete/queue.js"), "1.0.0",
@@ -64,7 +63,7 @@ test("reading version numbers from actual libraries", function _test(t) {
   t.end();
 });
 
-test("version numbers come with line number information", function _test(t) {
+test("version numbers come with line number information", (t) => {
   t.equal(getLine("fixtures/package.json"), 4,
           "Line numbers work for JSON.");
   t.equal(getLine("fixtures/complete/topojson.js"), 248,
@@ -74,7 +73,7 @@ test("version numbers come with line number information", function _test(t) {
   t.end();
 });
 
-test("setting version numbers", function _test(t) {
+test("setting version numbers", (t) => {
   sync.setVersion(["fixtures/component.json", "fixtures/package.json"], "0.0.5");
   t.equal(getVersion("fixtures/component.json"), "0.0.5");
   t.equal(getVersion("fixtures/package.json"), "0.0.5");
@@ -99,48 +98,42 @@ test("setting version numbers", function _test(t) {
 });
 
 /* eslint-disable no-shadow */
-test("commiting files and creating tag", function _test(t) {
-  var options = { cwd: "tmp" };
+test("commiting files and creating tag", (t) => {
+  const options = { cwd: "tmp" };
   t.plan(3);
 
-  exec("./git-test", function testDone(_error) {
+  exec("./git-test", (_error) => {
     sync.setVersion(["tmp/package.json", "tmp/component.json"], "0.0.2");
     sync.commitSourcesAndCreateTag(
-      ["package.json", "component.json"], "0.0.2",
-      function commitDone() {
-        exec("git status -s", options, function statusDone(_error, stdout) {
-          var files = stdout.split("\n");
-          var noStagedOrUnstagedFiles = true;
-          files.forEach(function each(file) {
-            if (file.match("component.json") || file.match("package.json")) {
-              noStagedOrUnstagedFiles = false;
-            }
-          });
+      ["package.json", "component.json"], "0.0.2", () => {
+        exec("git status -s", options, (_error, stdout) => {
+          const files = stdout.split("\n");
+          const noStagedOrUnstagedFiles = !files.some(
+            (file) => file.match(/(?:component|package)\.json/));
           t.ok(noStagedOrUnstagedFiles, "no staged or unstaged files");
         });
 
-        exec("git log -1 --pretty=%B", options, function logDone(_error, stdout) {
-          var commit = stdout.replace(/\n/g, "");
+        exec("git log -1 --pretty=%B", options, (_error, stdout) => {
+          const commit = stdout.replace(/\n/g, "");
           t.equal(commit, "v0.0.2", "commit correctly created");
         });
 
-        exec("git describe --abbrev=0 --tags", options,
-             function descDone(_error, stdout) {
-               var tag = stdout.replace(/\n/g, "");
-               t.equal(tag, "v0.0.2", "tag correctly created");
-             });
+        exec("git describe --abbrev=0 --tags", options, (_error, stdout) => {
+          const tag = stdout.replace(/\n/g, "");
+          t.equal(tag, "v0.0.2", "tag correctly created");
+        });
       }, options);
   });
 });
 
-test("running versync", function _test(t) {
-  var options = { cwd: "tmp" };
+test("running versync", (t) => {
+  const options = { cwd: "tmp" };
   t.plan(2);
 
-  t.test(function sub1(t) {
+  t.test((t) => {
     t.plan(2);
-    exec("./exec-test", function testDone() {
-      exec("../../bin/versync -v", options, function syncDone(error, stdout) {
+    exec("./exec-test", () => {
+      exec("../../bin/versync -v", options, (error, stdout) => {
         t.equal(error, null);
         t.equal(stdout.replace(/\033\[[0-9;]*m/g, ""),
                 "[OK] Everything is in sync, the version number is 0.0.1.\n");
@@ -148,16 +141,15 @@ test("running versync", function _test(t) {
     });
   });
 
-  t.test(function sub2(t) {
+  t.test((t) => {
     t.plan(2);
-    exec("./exec-invalid-test", function testDone() {
-      exec("../../bin/versync -v -s invalid.js", options,
-           function syncDone(error, stdout) {
-             t.equal(error.code, 1);
-             t.equal(stdout.replace(/\033\[[0-9;]*m/g, ""),
-                     "[ERROR] Missing or wrong semver number in " +
-                     "invalid.js. Found: version\n");
-           });
+    exec("./exec-invalid-test", () => {
+      exec("../../bin/versync -v -s invalid.js", options, (error, stdout) => {
+        t.equal(error.code, 1);
+        t.equal(stdout.replace(/\033\[[0-9;]*m/g, ""),
+                "[ERROR] Missing or wrong semver number in " +
+                "invalid.js. Found: version\n");
+      });
     });
   });
 });

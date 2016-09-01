@@ -1,34 +1,32 @@
-/* global require module */
+/* global require exports */
 "use strict";
-var ts = require("typescript");
+const ts = require("typescript");
 
 function getLine(sourceFile, node) {
   return sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile))
     .line + 1; // + 1 because it is 0-based by default.
 }
 
-var exports = module.exports = {};
-
 exports.parse = function parse(filename, data) {
-  var sourceFile = ts.createSourceFile(filename, data);
-  var statements = sourceFile.statements;
-  for (var statementsIx = 0; statementsIx < statements.length; ++statementsIx) {
-    var statement = statements[statementsIx];
+  const sourceFile = ts.createSourceFile(filename, data);
+  const statements = sourceFile.statements;
+  for (let statementsIx = 0; statementsIx < statements.length; ++statementsIx) {
+    const statement = statements[statementsIx];
     if (statement.kind !== ts.SyntaxKind.VariableStatement ||
         statement.declarationList.kind !==
         ts.SyntaxKind.VariableDeclarationList) {
       continue;
     }
 
-    var decls = statement.declarationList.declarations;
-    for (var declsIx = 0; declsIx < decls.length; ++declsIx) {
-      var node = decls[declsIx];
+    const decls = statement.declarationList.declarations;
+    for (let declsIx = 0; declsIx < decls.length; ++declsIx) {
+      const node = decls[declsIx];
       if (node.kind !== ts.SyntaxKind.VariableDeclaration ||
           node.name.text !== "version") {
         continue;
       }
 
-      var initializer = node.initializer;
+      const initializer = node.initializer;
       if (initializer.kind !== ts.SyntaxKind.StringLiteral) {
         continue;
       }

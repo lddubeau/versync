@@ -109,3 +109,7 @@ Options:
 ## License
 
 This package is released under [the MIT License](http://opensource.org/licenses/MIT).
+
+## Contributing
+
+We are targetting the flavor of JavaScript that Node v4 and later support natively. Strictly speaking, this is neither ES5 nor ES6. It is more than ES5 because arrow functions, ``const``, ``let``, template strings, etc. are allowed. It is less than ES6 because Node v4 does not support all of ES6.

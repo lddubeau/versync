@@ -2,61 +2,57 @@
 
 /* global require process */
 "use strict";
-var sync = require("../");
-var fs = require("fs");
-var optimist = require("optimist");
-var semver = require("semver");
+const sync = require("../");
+const fs = require("fs");
+const optimist = require("optimist");
+const semver = require("semver");
 require("colors");
 
 /* eslint-disable no-console */
 
-var ERROR = "[ERROR] ".bold.red;
-var SUCCESS = "[OK] ".bold.green;
+const ERROR = "[ERROR] ".bold.red;
+const SUCCESS = "[OK] ".bold.green;
 
-var argv = optimist
-    .usage("Synchronizes version numbers accross package.json, component.json " +
-           "and other source files of your choosing." +
-           "\n Usage: " + "versync -s [source list] -b [release type].".bold)
+const argv = optimist
+    .usage(`Synchronizes version numbers accross package.json, component.json \
+and other source files of your choosing.
+Usage: ${"versync -s [source list] -b [release type].".bold}`)
       .option("b", {
         alias: "bump",
-        describe: "Bump the version number in package.json, component.json " +
-          "and all other specified source files. " +
-          "It can take one of the following values: " +
-          "major, minor, patch".bold +
-          ". Alternatively you can specify a custom version that is higher " +
-          "than the current one. If no value is specified, " +
-          "it defaults to " + "patch".bold + ".",
+        describe: `Bump the version number in package.json, component.json \
+and all other specified source files. It can take one of the following \
+values: ${"major, minor, patch".bold}. Alternatively you can specify a \
+custom version that is higher than the current one. If no value is specified, \
+it defaults to ${"patch".bold}.`,
       })
       .option("s", {
         alias: "sources",
-        describe: "Declare the JavaScript files in which the version " +
-          "number will be updated. If not explicitly " +
-          "specified, it is read from the package.json \"versionedSources\" " +
-          "property. If it's not present in the " +
-          "package.json and not explicitly specified, only component.json " +
-          "and package.json will be synced. Optional.",
+        describe: "Declare the JavaScript files in which the version number \
+will be updated. If not explicitly specified, it is read from the package.json \
+\"versionedSources\" property. If it's not present in the package.json and \
+not explicitly specified, only component.json and package.json will be synced. \
+Optional.",
       })
       .option("v", {
         alias: "verify",
-        describe: "Verifies that package.json, component.json and all " +
-          "other source files have the same version " +
-          "number and checks if it conforms to the semver specification.",
+        describe: "Verifies that package.json, component.json and all other \
+source files have the same version number and checks if it conforms to the \
+semver specification.",
       })
       .option("t", {
         alias: "tag",
-        describe: "Bump the version number, commit the changes to " +
-          "package.json, component.json and all other specified source files " +
-          "and create a git tag with the current version. " +
-          "It can take one of the following values: " +
-          "major, minor, patch".bold + ". Alternatively you can specify " +
-          "a custom version that is higher than the current one. If no " +
-          "value is specified, it defaults to " + "patch".bold + ".",
+        describe: `Bump the version number, commit the changes to package.json, \
+component.json and all other specified source files and create a git tag \
+with the current version. It can take one of the following values: \
+${"major, minor, patch".bold}. Alternatively you can specify a custom version \
+that is higher than the current one. If no value is specified, it defaults to \
+${"patch".bold}.`,
       })
-      .argv;
+        .argv;
 
 if (argv.help || (!argv.verify && !argv.bump && !argv.tag)) {
-  console.log("Running " + "versync".bold.green + " version " +
-              sync.version.bold.green + ".\n");
+  console.log(`Running ${"versync".bold.green} version \
+${sync.version.bold.green}.\n`);
   console.log(optimist.help());
   process.exit(0);
 }
@@ -70,15 +66,16 @@ if (argv.bump === true) {
 }
 
 if (!fs.existsSync("package.json")) {
-  console.log(ERROR + "No package.json found in the current directory, exiting.");
+  console.log(
+    `${ERROR}No package.json found in the current directory, exiting.`);
   process.exit(1);
 }
 
-var sources = (function makeSources() {
-  var srcs = ["package.json"];
+const sources = (function makeSources() {
+  let srcs = ["package.json"];
 
   // supporting both bower variants
-  ["component.json", "bower.json"].forEach(function each(source) {
+  ["component.json", "bower.json"].forEach((source) => {
     if (fs.existsSync(source)) {
       srcs.push(source);
     }
@@ -88,47 +85,44 @@ var sources = (function makeSources() {
     srcs = srcs.concat(argv.sources.split(","));
   }
   else {
-    var packageJSON = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+    const packageJSON = JSON.parse(fs.readFileSync("package.json", "utf-8"));
     if (packageJSON.versionedSources) {
       srcs = srcs.concat(packageJSON.versionedSources.split(","));
     }
   }
   // we filter out any duplicates from the srcs array to prevent confusion in
   // the output
-  srcs = srcs.filter(function filter(val, idx, arr) {
-    return arr.indexOf(val) === idx;
-  });
-  return srcs;
+  return srcs.filter((val, idx, arr) => arr.indexOf(val) === idx);
 }());
 
 function getVersion(filename) {
-  var version = sync.getVersion(filename).version;
+  const version = sync.getVersion(filename).version;
   if (!semver.valid(version)) {
-    console.log(ERROR + "Missing or wrong semver number in " + filename +
-                ". Found: " + version);
+    console.log(`${ERROR}Missing or wrong semver number in ${filename}. Found: \
+${version}`);
     process.exit(1);
   }
   return version;
 }
 
-var version = getVersion("package.json");
+let version = getVersion("package.json");
 
 function verify(toVerify, expectedVersion) {
-  var errSources = [];
-  toVerify.forEach(function each(source) {
+  const errSources = [];
+  toVerify.forEach((source) => {
     if (getVersion(source) !== expectedVersion) {
       errSources.push(source);
     }
   });
 
   if (errSources.length > 0) {
-    console.log(ERROR + "Version number is out of sync in " +
-                errSources.join(", ").red + ".");
+    console.log(`${ERROR}Version number is out of sync in \
+${errSources.join(", ").red}.`);
     process.exit(1);
   }
   else {
-    console.log(SUCCESS + "Everything is in sync, the version number is " +
-                expectedVersion.bold.green + ".");
+    console.log(`${SUCCESS}Everything is in sync, the version number is \
+${expectedVersion.bold.green}.`);
   }
 }
 
@@ -144,21 +138,20 @@ if (argv.bump || argv.tag) {
     version = semver.inc(version, argv.bump);
   }
   else {
-    console.log(
-      ERROR + "Invalid release name specified, please use " +
-        "major, minor, patch".bold +
-        ", or specify a custom version that is higher than the current one.");
+    console.log(`${ERROR}Invalid release name specified, please use \
+${"major, minor, patch".bold}, or specify a custom version that is higher \
+than the current one.`);
     process.exit(1);
   }
 
   sync.setVersion(sources, version);
-  console.log(SUCCESS + "Version number was updated to " + version.bold.green +
-              " in " + sources.join(", ").bold + ".");
+  console.log(`${SUCCESS}Version number was updated to ${version.bold.green} \
+in ${sources.join(", ").bold}.`);
 }
 
 if (argv.tag) {
-  sync.commitSourcesAndCreateTag(sources, version, function committed() {
-    console.log(SUCCESS + "Files have been committed and tag " +
-                ("v" + version).bold.green + " was created.");
+  sync.commitSourcesAndCreateTag(sources, version, () => {
+    console.log(`${SUCCESS}Files have been committed and tag \
+${`v${version}`.bold.green} was created.`);
   });
 }
