@@ -2,8 +2,11 @@
 "use strict";
 const exec = require("child_process").exec;
 const fs = require("fs");
+const Promise = require("bluebird");
 const path = require("path");
 const patterns = require("./patterns");
+
+Promise.promisifyAll(fs);
 
 // We separate require("typescript") and require("./tspatterns") so that errors
 // with the latter are not disguised as problems with the typescript package.
@@ -40,6 +43,39 @@ exports.existsSync = function existsSync(filePath) {
   catch (ex) {
     return false;
   }
+};
+
+/**
+ * Get a list of sources to process. This list includes by default
+ * ``package.json``, ``component.json`` and ``bower.json``. It also includes the
+ * files specified by the ``versionedSources`` key in ``package.json``.
+ *
+ * @param {Array.<string>} extraSources An array of additional sources to
+ * include.
+ *
+ * @returns {Promise<Array.<string>>} The sources. Duplicates are automatically
+ * removed.
+ */
+exports.getSources = function getSources(extraSources) {
+  // We support both bower variants and do not add these unless they exist.
+  return Promise.filter(["component.json", "bower.json"],
+                        source => fs.statAsync(source).catchReturn(false))
+    .then((sources) => ["package.json"].concat(sources))
+    .then((sources) => ((extraSources && extraSources.length) ?
+          sources.concat(extraSources) : sources))
+    .then((sources) =>
+          fs.readFileAsync("package.json", "utf-8").then((data) => {
+            const pkg = JSON.parse(data);
+            if (pkg.versionedSources) {
+              sources = sources.concat(pkg.versionedSources.split(","));
+            }
+
+            return sources;
+          }))
+  // We filter out any duplicates from the srcs array to prevent confusion
+  // in the output.
+    .then((sources) => sources.filter(
+      (val, idx, arr) => arr.indexOf(val) === idx));
 };
 
 exports.getVersion = function getVersion(filename) {

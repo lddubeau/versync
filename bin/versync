@@ -71,30 +71,6 @@ if (!sync.existsSync("package.json")) {
   process.exit(1);
 }
 
-const sources = (function makeSources() {
-  let srcs = ["package.json"];
-
-  // supporting both bower variants
-  ["component.json", "bower.json"].forEach((source) => {
-    if (fs.existsSync(source)) {
-      srcs.push(source);
-    }
-  });
-
-  if (argv.sources) {
-    srcs = srcs.concat(argv.sources.split(","));
-  }
-  else {
-    const packageJSON = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-    if (packageJSON.versionedSources) {
-      srcs = srcs.concat(packageJSON.versionedSources.split(","));
-    }
-  }
-  // we filter out any duplicates from the srcs array to prevent confusion in
-  // the output
-  return srcs.filter((val, idx, arr) => arr.indexOf(val) === idx);
-}());
-
 function getVersion(filename) {
   const version = sync.getVersion(filename).version;
   if (!semver.valid(version)) {
@@ -126,32 +102,34 @@ ${expectedVersion.bold.green}.`);
   }
 }
 
-if (argv.verify || argv.bump || argv.tag) {
-  verify(sources, version);
-}
+sync.getSources(argv.sources && argv.sources.split(",")).then((sources) => {
+  if (argv.verify || argv.bump || argv.tag) {
+    verify(sources, version);
+  }
 
-if (argv.bump || argv.tag) {
-  if (semver.valid(argv.bump) && semver.gt(argv.bump, version)) {
-    version = argv.bump;
-  }
-  else if (~["major", "minor", "patch"].indexOf(argv.bump)) {
-    version = semver.inc(version, argv.bump);
-  }
-  else {
-    console.log(`${ERROR}Invalid release name specified, please use \
+  if (argv.bump || argv.tag) {
+    if (semver.valid(argv.bump) && semver.gt(argv.bump, version)) {
+      version = argv.bump;
+    }
+    else if (~["major", "minor", "patch"].indexOf(argv.bump)) {
+      version = semver.inc(version, argv.bump);
+    }
+    else {
+      console.log(`${ERROR}Invalid release name specified, please use \
 ${"major, minor, patch".bold}, or specify a custom version that is higher \
 than the current one.`);
-    process.exit(1);
+      process.exit(1);
+    }
+
+    sync.setVersion(sources, version);
+    console.log(`${SUCCESS}Version number was updated to ${version.bold.green} \
+in ${sources.join(", ").bold}.`);
   }
 
-  sync.setVersion(sources, version);
-  console.log(`${SUCCESS}Version number was updated to ${version.bold.green} \
-in ${sources.join(", ").bold}.`);
-}
-
-if (argv.tag) {
-  sync.commitSourcesAndCreateTag(sources, version, () => {
-    console.log(`${SUCCESS}Files have been committed and tag \
+  if (argv.tag) {
+    sync.commitSourcesAndCreateTag(sources, version, () => {
+      console.log(`${SUCCESS}Files have been committed and tag \
 ${`v${version}`.bold.green} was created.`);
-  });
-}
+    });
+  }
+});
