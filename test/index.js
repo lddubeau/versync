@@ -1,155 +1,215 @@
-/* global require */
+/* global require describe it process before after */
+/* eslint-env mocha */
 "use strict";
 
 const exec = require("child_process").exec;
-const test = require("tap").test;
 const sync = require("../");
 const del = require("del");
-const fs = require("fs-extra");
+let fs = require("fs-extra");
+const path = require("path");
 const mockery = require("mockery");
+const Promise = require("bluebird");
+const chai = require("chai");
+const chaiAsPromised = require("chai-as-promised");
+chai.use(chaiAsPromised);
+const assert = chai.assert;
 
-function getVersion(filename) {
-  return sync.getVersion(filename).version;
+fs = Promise.promisifyAll(fs);
+
+function execAsync(command, options) {
+  return new Promise((resolve, reject) => {
+    exec(command, options, (err, stdout, stderr) => {
+      if (err) {
+        const newErr = new Error(`${command} failed`);
+        newErr.originalError = err;
+        newErr.stdout = stdout;
+        newErr.stderr = stderr;
+        reject(newErr);
+      }
+      resolve([stdout, stderr]);
+    });
+  });
 }
 
-function getLine(filename) {
-  return sync.getVersion(filename).line;
+function toFixture(filename) {
+  return `fixtures/${filename}`;
 }
 
-test("reading version numbers from simple text fixtures", (t) => {
-  t.equal(getVersion("fixtures/package.json"), "0.0.1", "json");
-  t.equal(getVersion("fixtures/assigned.js"), "0.0.7",
-          "module.exports.version assignment");
-  t.equal(getVersion("fixtures/literal.js"), "0.10.29",
-          "object literal returned from a module function");
-  t.equal(getVersion("fixtures/assigned-literal.js"), "7.7.7",
-          "object literal assigned to exports");
-  t.equal(getVersion("fixtures/amd.js"), "0.9.0",
-          "object literal assigned to exports in AMD-style module");
-  t.equal(getVersion("fixtures/tsmodule.ts"), "0.0.1",
-          "exports from TypeScript module");
-  t.end();
+let prevdir;
+before(() => {
+  prevdir = process.cwd();
+  process.chdir("test");
 });
 
-test("reading version numbers from ts data without typescript", (t) => {
+after(() => process.chdir(prevdir));
+
+describe("reads version numbers from ", () => {
+  function test(name, filename, version) {
+    it(name, () => assert.eventually.equal(
+      sync.getVersion(toFixture(filename)).get("version"), version));
+  }
+
+  test("json", "package.json", "0.0.1");
+  test("module.exports.version assignment", "assigned.js", "0.0.7");
+  test("object literal returned from a module function", "literal.js",
+       "0.10.29");
+  test("object literal assigned to exports", "assigned-literal.js", "7.7.7");
+  test("object literal assigned to exports in AMD-style module", "amd.js",
+       "0.9.0");
+  test("exports from TypeScript module", "tsmodule.ts", "0.0.1");
+
+  describe("actual libraries", () => {
+    test("topojson.js", "complete/topojson.js", "0.0.10");
+    test("queue.js", "complete/queue.js", "1.0.0");
+    test("d3.js", "complete/d3.js", "3.0.5");
+  });
+});
+
+describe("version numbers come with line number information from", () => {
+  function test(name, filename, line) {
+    it(name, () => assert.eventually.equal(
+      sync.getVersion(toFixture(filename)).get("line"), line));
+  }
+
+  test("json", "package.json", 4);
+  test("topojson.js", "complete/topojson.js", 248);
+  test("a TypeScript module", "tsmodule.ts", 10);
+});
+
+
+const tmpdir = "tmp";
+
+function copyFixturesToTmp(files) {
+  return Promise.map(files, (filename) => {
+    const fullpath = toFixture(filename);
+    const tmpfile = path.join(tmpdir, filename);
+    return fs.copyAsync(fullpath, tmpfile).return(tmpfile);
+  });
+}
+
+describe("sets version numbers", () => {
+  const setVersionTmp = Promise.coroutine(function *setVersionTmp(
+    files, version) {
+    yield del([tmpdir]);
+    yield fs.ensureDirAsync(tmpdir);
+    const tmpfiles = yield copyFixturesToTmp(files);
+
+    return sync.setVersion(tmpfiles, version).return(tmpfiles);
+  });
+
+
+  function test(name, files, version) {
+    it(name, Promise.coroutine(function *_test() {
+      const tmpfiles = yield setVersionTmp(files, version);
+      assert.equal(tmpfiles.length, files.length);
+      yield Promise.map(tmpfiles,
+                        (file) => assert.eventually.equal(
+                          sync.getVersion(file).get("version"),
+                          version));
+    }));
+  }
+
+  test("in json files", ["component.json", "package.json"],
+      "0.0.5");
+  test("topojson.js", ["complete/topojson.js"], "0.0.11");
+  test("TypeScript module", ["tsmodule.ts"], "0.1.0");
+});
+
+it("fails when reading ts data without typescript", () => {
   mockery.enable({
     useCleanCache: true,
     warnOnUnregistered: false,
   });
-  try {
+  return Promise.try(() => {
     mockery.registerSubstitute("typescript", "nonexistent___");
     mockery.registerAllowable("..");
     const nots = require(".."); // eslint-disable-line global-require
-    t.throws(nots.getVersion.bind(undefined, "fixtures/tsmodule.ts"),
-             new Error("file fixtures/tsmodule.ts is a TypeScript file " +
-                       "but the package `typescript` is not available; " +
-                       "please install it."),
-             "throws an error");
-    t.end();
-  }
-  finally {
+    return assert.isRejected(
+      nots.getVersion("fixtures/tsmodule.ts"),
+      Error, "file fixtures/tsmodule.ts is a TypeScript file " +
+        "but the package `typescript` is not available; " +
+        "please install it.");
+  }).finally(() => {
     mockery.disable();
-  }
+  });
 });
 
-
-test("reading version numbers from actual libraries", (t) => {
-  t.equal(getVersion("fixtures/complete/topojson.js"), "0.0.10",
-          "topojson.js parsed correctly.");
-  t.equal(getVersion("fixtures/complete/queue.js"), "1.0.0",
-          "queue.js parsed correctly.");
-  t.equal(getVersion("fixtures/complete/d3.js"), "3.0.5",
-          "d3.js parsed correctly.");
-  t.end();
-});
-
-test("version numbers come with line number information", (t) => {
-  t.equal(getLine("fixtures/package.json"), 4,
-          "Line numbers work for JSON.");
-  t.equal(getLine("fixtures/complete/topojson.js"), 248,
-          "Line number determined correctly for topojson.js.");
-  t.equal(getLine("fixtures/tsmodule.ts"), 10,
-          "Line numbers work for TypeScript module.");
-  t.end();
-});
-
-test("setting version numbers", (t) => {
-  sync.setVersion(["fixtures/component.json", "fixtures/package.json"], "0.0.5");
-  t.equal(getVersion("fixtures/component.json"), "0.0.5");
-  t.equal(getVersion("fixtures/package.json"), "0.0.5");
-  sync.setVersion(["fixtures/component.json", "fixtures/package.json"], "0.0.1");
-  t.equal(getVersion("fixtures/component.json"), "0.0.1");
-  t.equal(getVersion("fixtures/package.json"), "0.0.1");
-
-  sync.setVersion(["fixtures/complete/topojson.js"], "0.0.11");
-  t.equal(getVersion("fixtures/complete/topojson.js"), "0.0.11",
-          "topojson.js parsed correctly.");
-  sync.setVersion(["fixtures/complete/topojson.js"], "0.0.10");
-
-  del.sync(["tmp"]);
-  fs.ensureDirSync("tmp");
-  fs.copySync("fixtures/tsmodule.ts", "tmp/tsmodule.ts");
-  // Do it on a ts file.
-  t.equal(getVersion("tmp/tsmodule.ts"), "0.0.1");
-  sync.setVersion(["tmp/tsmodule.ts"], "0.10.0");
-  t.equal(getVersion("tmp/tsmodule.ts"), "0.10.0");
-
-  t.end();
-});
 
 /* eslint-disable no-shadow */
-test("commiting files and creating tag", (t) => {
-  const options = { cwd: "tmp" };
-  t.plan(3);
+it("commiting files and creating tag", Promise.coroutine(function *_test() {
+  yield del([tmpdir]);
+  yield fs.ensureDirAsync(tmpdir);
+  yield copyFixturesToTmp(["package.json", "component.json"]);
 
-  exec("./git-test", (_error) => {
-    sync.setVersion(["tmp/package.json", "tmp/component.json"], "0.0.2");
-    sync.commitSourcesAndCreateTag(
-      ["package.json", "component.json"], "0.0.2", () => {
-        exec("git status -s", options, (_error, stdout) => {
-          const files = stdout.split("\n");
-          const noStagedOrUnstagedFiles = !files.some(
-            (file) => file.match(/(?:component|package)\.json/));
-          t.ok(noStagedOrUnstagedFiles, "no staged or unstaged files");
-        });
+  const prevdir = process.cwd();
+  try {
+    process.chdir("tmp");
 
-        exec("git log -1 --pretty=%B", options, (_error, stdout) => {
-          const commit = stdout.replace(/\n/g, "");
-          t.equal(commit, "v0.0.2", "commit correctly created");
-        });
+    yield execAsync("git init");
+    yield execAsync("git add .");
+    yield execAsync("git commit -m'Initial commit.'");
 
-        exec("git describe --abbrev=0 --tags", options, (_error, stdout) => {
-          const tag = stdout.replace(/\n/g, "");
-          t.equal(tag, "v0.0.2", "tag correctly created");
-        });
-      }, options);
-  });
-});
+    yield fs.writeFileAsync("test.txt", "");
 
-test("running versync", (t) => {
-  const options = { cwd: "tmp" };
-  t.plan(2);
+    const versionedFiles = ["package.json", "component.json"];
+    yield sync.setVersion(versionedFiles, "0.0.2");
 
-  t.test((t) => {
-    t.plan(2);
-    exec("./exec-test", () => {
-      exec("../../bin/versync -v", options, (error, stdout) => {
-        t.equal(error, null);
-        t.equal(stdout.replace(/\033\[[0-9;]*m/g, ""),
-                "[OK] Everything is in sync, the version number is 0.0.1.\n");
+    yield new Promise((resolve) => {
+      sync.commitSourcesAndCreateTag(versionedFiles, "0.0.2", () => {
+        resolve();
       });
     });
-  });
 
-  t.test((t) => {
-    t.plan(2);
-    exec("./exec-invalid-test", () => {
-      exec("../../bin/versync -v -s invalid.js", options, (error, stdout) => {
-        t.equal(error.code, 1);
-        t.equal(stdout.replace(/\033\[[0-9;]*m/g, ""),
-                "[ERROR] Missing or wrong semver number in " +
-                "invalid.js. Found: version\n");
-      });
+    let result = yield execAsync("git status -s");
+    let stdout = result[0];
+
+    const files = stdout.split("\n");
+    assert.isTrue(files.length > 0);
+    // Check that there are no uncommited files that matter to us.
+    const noUnCommitted = !files.some(
+      (file) => file.match(/(?:component|package)\.json/));
+    assert.isTrue(noUnCommitted, "no staged or unstaged files");
+
+    result = yield execAsync("git log -1 --pretty=%B");
+    stdout = result[0];
+
+    const commit = stdout.replace(/\n/g, "");
+    assert.equal(commit, "v0.0.2", "commit correctly created");
+
+    result = yield execAsync("git describe --abbrev=0 --tags");
+    stdout = result[0];
+
+    const tag = stdout.replace(/\n/g, "");
+    assert.equal(tag, "v0.0.2", "tag correctly created");
+  }
+  finally {
+    process.chdir(prevdir);
+  }
+}));
+
+describe("running versync", () => {
+  const options = { cwd: tmpdir };
+
+  after(() => del([tmpdir]));
+
+  beforeEach(() => del([tmpdir]).then(() => fs.ensureDirAsync(tmpdir)));
+
+  it("success", Promise.coroutine(function *test() {
+    yield copyFixturesToTmp(["package.json", "component.json"]);
+
+    const result = yield execAsync("../../bin/versync -v", options);
+    assert.equal(result[1], "");
+    assert.equal(result[0].replace(/\033\[[0-9;]*m/g, ""),
+                 "[OK] Everything is in sync, the version number is 0.0.1.\n");
+  }));
+
+  it("failure", Promise.coroutine(function *test() {
+    yield copyFixturesToTmp(["package.json", "invalid.js", "invalid.ts"]);
+
+    yield execAsync("../../bin/versync -v -s invalid.js", options).catch(err => {
+      assert.equal(err.stdout.replace(/\033\[[0-9;]*m/g, ""),
+                   "[ERROR] Missing or wrong semver number in " +
+                   "invalid.js. Found: version\n");
     });
-  });
+  }));
 });

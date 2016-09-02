@@ -1,9 +1,0 @@
-#!/bin/sh
-
-rm -rf tmp
-mkdir tmp
-cd tmp
-
-cp ../fixtures/package.json .
-cp ../fixtures/invalid.js .
-cp ../fixtures/invalid.ts .
