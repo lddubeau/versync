@@ -85,7 +85,7 @@ patterns.push((node) => {
 
   if (result) {
     // eslint-disable-next-line no-console
-    console.log(`WARNING: found version number ${result.version}, ` +
+    console.warn(`WARNING: found version number ${result.version}, ` +
       "but not directly assigned to module or exports.");
   }
   return result;

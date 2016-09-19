@@ -5,7 +5,6 @@
 const sync = require("../");
 const fs = require("fs");
 const optimist = require("optimist");
-const semver = require("semver");
 require("colors");
 
 /* eslint-disable no-console */
@@ -65,71 +64,32 @@ if (argv.bump === true) {
   argv.bump = "patch";
 }
 
-if (!sync.existsSync("package.json")) {
+function existsSync(filePath) {
+  try {
+    fs.statSync(filePath);
+    return true;
+  }
+  catch (ex) {
+    return false;
+  }
+}
+
+if (!existsSync("package.json")) {
   console.log(
     `${ERROR}No package.json found in the current directory, exiting.`);
   process.exit(1);
 }
 
-function getVersion(filename) {
-  const version = sync.getVersion(filename).version;
-  if (!semver.valid(version)) {
-    console.log(`${ERROR}Missing or wrong semver number in ${filename}. Found: \
-${version}`);
-    process.exit(1);
-  }
-  return version;
+if (argv.sources) {
+  argv.sources = argv.sources.split(",");
 }
 
-let version = getVersion("package.json");
+const runner = new sync.Runner(argv);
+runner.onMessage((message) => {
+  console.log(`${SUCCESS}${message}`);
+});
 
-function verify(toVerify, expectedVersion) {
-  const errSources = [];
-  toVerify.forEach((source) => {
-    if (getVersion(source) !== expectedVersion) {
-      errSources.push(source);
-    }
-  });
-
-  if (errSources.length > 0) {
-    console.log(`${ERROR}Version number is out of sync in \
-${errSources.join(", ").red}.`);
-    process.exit(1);
-  }
-  else {
-    console.log(`${SUCCESS}Everything is in sync, the version number is \
-${expectedVersion.bold.green}.`);
-  }
-}
-
-sync.getSources(argv.sources && argv.sources.split(",")).then((sources) => {
-  if (argv.verify || argv.bump || argv.tag) {
-    verify(sources, version);
-  }
-
-  if (argv.bump || argv.tag) {
-    if (semver.valid(argv.bump) && semver.gt(argv.bump, version)) {
-      version = argv.bump;
-    }
-    else if (~["major", "minor", "patch"].indexOf(argv.bump)) {
-      version = semver.inc(version, argv.bump);
-    }
-    else {
-      console.log(`${ERROR}Invalid release name specified, please use \
-${"major, minor, patch".bold}, or specify a custom version that is higher \
-than the current one.`);
-      process.exit(1);
-    }
-
-    sync.setVersion(sources, version);
-    console.log(`${SUCCESS}Version number was updated to ${version.bold.green} \
-in ${sources.join(", ").bold}.`);
-  }
-
-  if (argv.tag) {
-    sync.commitSourcesAndCreateTag(sources, version, () => {
-      console.log(`${SUCCESS}Files have been committed and tag \
-${`v${version}`.bold.green} was created.`);
-    });
-  }
+runner.run().catch((err) => {
+  console.log(`${ERROR}${err.message}`);
+  process.exit(1);
 });

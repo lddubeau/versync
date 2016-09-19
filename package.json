@@ -6,7 +6,8 @@
   "keywords": [
     "semver",
     "version",
-    "sync"
+    "sync",
+    "TypeScript"
   ],
   "contributors": [
     {
@@ -36,19 +37,21 @@
     "uglify-js": "2.2.3"
   },
   "devDependencies": {
+    "chai": "^3.5.0",
+    "chai-as-promised": "^5.3.0",
     "del": "^2.2.2",
     "eslint": "^2.13.1",
     "eslint-config-lddubeau-base": "^0.1.1",
     "fs-extra": "^0.30.0",
+    "mocha": "^3.0.2",
     "mockery": "^1.7.0",
-    "tap": "~0.2.4",
     "typescript": "^1.8.10"
   },
   "bin": {
     "versync": "./bin/versync"
   },
   "scripts": {
-    "test": "tap ./test/*.js --stderr"
+    "test": "mocha"
   },
   "optionalDependencies": {
     "typescript": "^1.8.10"
