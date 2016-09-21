@@ -51,7 +51,8 @@
     "versync": "./bin/versync"
   },
   "scripts": {
-    "test": "mocha"
+    "test": "npm run lint && mocha",
+    "lint": "eslint *.js bin/versync test/*.js"
   },
   "optionalDependencies": {
     "typescript": "^1.8.10"
