@@ -1,5 +1,9 @@
 3.0.0:
 
+ - Support for ES6.
+
+ - Now offers a documented API.
+
  - Supports setting ``versionedSources`` as an array.
 
  - Deprecation: Setting ``versionedSources`` as a comma-separated list
