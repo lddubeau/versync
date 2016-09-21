@@ -1,27 +1,16 @@
 /* global require exports */
 "use strict";
-const uglify = require("uglify-js");
+const esprima = require("esprima");
 
 function isObjectLiteral(node) {
-  return node.start && node.end
-      && node.start.value === "{" && node.end.value === "}";
-}
-
-function isJSONObject(node) {
-  return node.start && node.end
-      && node.start.value === "(" && node.end.value === ")"
-      && node.properties;
+  return node.type === "ObjectExpression";
 }
 
 function extractVersionProperty(properties) {
   let result;
   properties.forEach((prop) => {
-    if (prop.key === "version") {
-      result = {
-        version: prop.value.value,
-        line: prop.end.line,
-      };
-
+    if (prop.key.value === "version" || prop.key.name === "version") {
+      result = prop.value;
       return false;
     }
     return true;
@@ -30,63 +19,87 @@ function extractVersionProperty(properties) {
   return result;
 }
 
+function unparseMemberExpression(node) {
+  const object = node.object;
+  const unparsedObject = (object.type === "MemberExpression") ?
+        unparseMemberExpression(object) : object.name;
+  return `${unparsedObject}.${node.property.name}`;
+}
+
+function versionFromNode(source, node) {
+  let version = node.value;
+
+  if (version === undefined) {
+    // We have a node, but it does not have a value. We're probably dealing with
+    // an expression of some sort, extract it from the data. This allows
+    // providing a more useful error message.
+    version = source.substring(node.range[0], node.range[1]);
+  }
+
+  return version;
+}
+
 const patterns = [];
 
-patterns.push((node) => {
-  // matching module.exports.version = "..." and exports.version = "..."
-  // TODO: also matches module.version which is not quite OK
-  if (node.operator === "=" && node.left.property === "version"
-    && ~["module", "exports"].indexOf(node.left.start.value)) {
-    return {
-      version: node.right.end.value,
-      line: node.right.end.line,
-    };
-  }
-
-  return undefined;
-});
-
-patterns.push((node) => {
-  // matching object literals from assignments to exports
-  if (node.operator === "=" && node.left.property === "exports"
-    && isObjectLiteral(node.right)) {
-    return extractVersionProperty(node.right.properties);
-  }
-
-  return undefined;
-});
-
-patterns.push((node) => {
+patterns.push((source, node) => {
   // matching return { [...], version: "...", [...] }
-  if (node.start && node.value && node.start.value === "return"
-      && isObjectLiteral(node.value)) {
-    return extractVersionProperty(node.value.properties);
+  if (node.type === "ReturnStatement" && isObjectLiteral(node.argument)) {
+    return extractVersionProperty(node.argument.properties);
   }
 
   return undefined;
 });
 
-patterns.push((node) => {
-  // matching generic assignments to .version or
-  // literals containing the property "version"
+patterns.push((source, node) => {
+  // matching export ...
+  if (node.type === "ExportNamedDeclaration") {
+    const declarations = node.declaration.declarations;
+
+    for (let i = 0; i < declarations.length; ++i) {
+      const declaration = declarations[i];
+
+      if (declaration.id.name === "version") {
+        return declaration.init;
+      }
+    }
+  }
+  return undefined;
+});
+
+patterns.push((source, node) => {
+  // Matches assignments to `.version` (e.g. `exports.version = "1.2.3"`) or
+  // assignment that assign literals containing the property "version"
+  // (e.g. `module.exports = { version: 1.2.3}`).
   let result;
-  if (node.left && node.left.property === "version") {
-    result = {
-      version: node.right.end.value,
-      line: node.right.end.line,
-    };
+
+  // If we got *a* result but it is in an unexpected location, we want to warn
+  // the user.
+  let warn = true;
+
+  if (node.left &&
+      node.left.type === "MemberExpression" &&
+      node.left.property.name === "version") {
+    result = node.right;
+    const unparsed = unparseMemberExpression(node.left);
+    warn = ["exports.version", "module.exports.version"]
+      .indexOf(unparsed) === -1;
   }
   else if (node.value && isObjectLiteral(node.value)) {
     result = extractVersionProperty(node.value.properties);
   }
   else if (node.operator === "=" && isObjectLiteral(node.right)) {
     result = extractVersionProperty(node.right.properties);
+    if (node.left.type === "MemberExpression") {
+      const unparsed = unparseMemberExpression(node.left);
+      warn = ["exports", "module.exports"].indexOf(unparsed) === -1;
+    }
   }
 
-  if (result) {
+  if (result && warn) {
+    const version = versionFromNode(source, result);
     // eslint-disable-next-line no-console
-    console.warn(`WARNING: found version number ${result.version}, ` +
-      "but not directly assigned to module or exports.");
+    console.warn(`WARNING: found version number ${version}, ` +
+      "but not directly assigned to exports or module.exports.");
   }
   return result;
 });
@@ -94,21 +107,22 @@ patterns.push((node) => {
 // matching simple object literals
 // useful for JSON
 patterns.push(
-  (node) =>
-    (isJSONObject(node) ? extractVersionProperty(node.properties) : undefined));
+  (source, node) => (isObjectLiteral(node) ?
+                     extractVersionProperty(node.properties)
+                     : undefined));
 
-patterns.match = function match(node) {
+patterns.match = function match(source, node) {
   let result;
   patterns.find((pattern) => {
-    result = pattern(node);
+    result = pattern(source, node);
     return result;
   });
   return result;
 };
 
 
-function traverse(node) {
-  let result = patterns.match(node);
+function traverse(source, node) {
+  let result = patterns.match(source, node);
   if (result) {
     // if a pattern matched, we return what we found and exit
     return result;
@@ -120,35 +134,69 @@ function traverse(node) {
       node = node.body;
     }
     node.find((n) => {
-      result = traverse(n);
+      result = traverse(source, n);
       return result;
     });
 
     return result;
   }
-  else if (node.args && node.args.length) {
-    node.args.find((n) => {
-      result = traverse(n);
+  else if (node.arguments && node.arguments.length) {
+    node.arguments.find((n) => {
+      result = traverse(source, n);
       return result;
     });
 
     return result;
   }
   else if (node.body) {
-    return traverse(node.body);
+    return traverse(source, node.body);
   }
   else if (node.expression) {
-    return traverse(node.expression);
+    return traverse(source, node.expression);
   }
-  else if (node.right && node.right.expression) {
-    return traverse(node.right.expression);
+  else if (node.right) {
+    return traverse(source, node.right);
+  }
+  else if (node.callee) {
+    return traverse(source, node.callee);
   }
 
   return undefined;
 }
 
-
 exports.parse = function parse(data) {
-  const ast = uglify.parse(data);
-  return traverse(ast);
+  const options = {
+    loc: true,
+    range: true,
+    sourceType: "module",
+  };
+
+  let ast;
+  try {
+    ast = esprima.parse(data, options);
+  }
+  catch (ex) {
+    //
+    // When we parse with `sourceType: "module"`, it is possible that ES5 code
+    // will cause errors due to the use of words that are considered to be
+    // future reserved words (e.g. `var await = 1`, `await` is a future reserved
+    // word.
+    //
+    // These are effective only when parsing "module" source, so try again with
+    // "script".
+    //
+    options.sourceType = "script";
+    ast = esprima.parse(data, options);
+  }
+
+  const node = traverse(data, ast);
+
+  if (!node) {
+    return undefined;
+  }
+
+  return {
+    version: versionFromNode(data, node),
+    line: node.loc.end.line,
+  };
 };

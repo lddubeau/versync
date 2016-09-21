@@ -31,10 +31,10 @@
   "dependencies": {
     "bluebird": "^3.4.5",
     "colors": "0.6.0-1",
+    "esprima": "^3.0.0",
     "optimist": "0.3.5",
     "semver": "1.1.2",
-    "typescript": "^1.8.10",
-    "uglify-js": "2.2.3"
+    "typescript": "^1.8.10"
   },
   "devDependencies": {
     "chai": "^3.5.0",

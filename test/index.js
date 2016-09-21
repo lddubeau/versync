@@ -54,12 +54,16 @@ describe("getVersion", () => {
     }
 
     test("json", "package.json", "0.0.1");
-    test("module.exports.version assignment", "assigned.js", "0.0.7");
+    test("exports.version assignment", "assigned.js", "0.0.7");
+    test("module.exports.version assignment", "assigned-module-exports.js",
+         "0.0.7");
     test("object literal returned from a module function", "literal.js",
          "0.10.29");
     test("object literal assigned to exports", "assigned-literal.js", "7.7.7");
     test("object literal assigned to exports in AMD-style module", "amd.js",
          "0.9.0");
+    test("es6 file", "es6.js", "0.0.7");
+    test("export from es6 file", "es6-export.js", "0.0.7");
     test("exports from TypeScript module", "tsmodule.ts", "0.0.1");
 
     describe("actual libraries", () => {
@@ -78,6 +82,7 @@ describe("getVersion", () => {
     test("json", "package.json", 4);
     test("topojson.js", "complete/topojson.js", 248);
     test("a TypeScript module", "tsmodule.ts", 10);
+    test("export from es6 file", "es6-export.js", 3);
   });
 
   it("fails when reading ts data without typescript", () => {
@@ -146,6 +151,7 @@ describe("setVersion sets version numbers in", () => {
       "0.0.5");
   test("topojson.js", ["complete/topojson.js"], "0.0.11");
   test("TypeScript module", ["tsmodule.ts"], "0.1.0");
+  test("an es6 file", ["es6-export.js"], "0.1.0");
 });
 
 function setVersionedSources(value) {
