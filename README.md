@@ -106,6 +106,23 @@ Options:
 * `-t, --tag`
   Bump the version number, commit the changes to package.json, component.json and all other specified source files and create a git tag with the current version. It can take one of the following values: `major`, `minor`, `patch`. Alternatively you can specify a custom version that is higher than the current one. If no value is specified, it defaults to `patch`.
 
+## API
+
+You can now import versync and use its exported API. The code in
+`index.js` has been commented using JSDoc 3 doclets. We do not yet
+generate documentation from it, so you have to read the code to read
+the documentation of the API. In brief, you can now do:
+
+```
+const versync = require("versync");
+const runner = new sync.Runner({
+  bump: "minor",
+});
+runner.run().then(() => {
+  // Do somehting on success...
+});
+```
+
 ## License
 
 This package is released under [the MIT License](http://opensource.org/licenses/MIT).
