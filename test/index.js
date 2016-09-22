@@ -276,6 +276,8 @@ describe("commiting files and creating tag", () => {
         process.chdir("tmp");
 
         yield execAsync("git init");
+        yield execAsync("git config user.email 'you@example.com'");
+        yield execAsync("git config user.name YourName");
         yield execAsync("git add .");
         yield execAsync("git commit -m'Initial commit.'");
 
