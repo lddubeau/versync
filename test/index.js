@@ -18,6 +18,10 @@ const assert = chai.assert;
 fs = Promise.promisifyAll(fs);
 
 function execAsync(command, options) {
+  options = options || {};
+  const silentFailure = options.silentFailure;
+  delete options.silentFailure;
+
   return new Promise((resolve, reject) => {
     exec(command, options, (err, stdout, stderr) => {
       if (err) {
@@ -25,6 +29,12 @@ function execAsync(command, options) {
         newErr.originalError = err;
         newErr.stdout = stdout;
         newErr.stderr = stderr;
+        if (!silentFailure) {
+          /* eslint-disable no-console */
+          console.log(stdout);
+          console.log(stderr);
+          /* eslint-enable no-console */
+        }
         reject(newErr);
       }
       resolve({
@@ -536,7 +546,8 @@ describe("running versync", () => {
 
   beforeEach(() => del([tmpdir]).then(() => fs.ensureDirAsync(tmpdir)));
 
-  function execVersync(args) {
+  function execVersync(args, silent) {
+    options.silentFailure = silent;
     return execAsync(`../../bin/versync ${args}`, options);
   }
 
@@ -570,7 +581,7 @@ describe("running versync", () => {
   it("verify failure", Promise.coroutine(function *test() {
     yield copyFixturesToTmp(["package.json", "invalid.js", "invalid.ts"]);
 
-    yield execVersync("-v -s invalid.js").catch((err) => {
+    yield execVersync("-v -s invalid.js", true).catch((err) => {
       assert.equal(cleanOutput(err.stdout),
                    "[ERROR] Missing or wrong semver number in " +
                    "invalid.js. Found: version\n");
