@@ -11,6 +11,7 @@ const mockery = require("mockery");
 const Promise = require("bluebird");
 const chai = require("chai");
 const chaiAsPromised = require("chai-as-promised");
+
 chai.use(chaiAsPromised);
 const assert = chai.assert;
 
@@ -93,7 +94,9 @@ describe("getVersion", () => {
     return Promise.try(() => {
       mockery.registerSubstitute("typescript", "nonexistent___");
       mockery.registerAllowable("..");
+
       const nots = require(".."); // eslint-disable-line global-require
+
       return assert.isRejected(
         nots.getVersion("fixtures/tsmodule.ts"),
         Error, "file fixtures/tsmodule.ts is a TypeScript file " +
@@ -141,7 +144,7 @@ describe("setVersion sets version numbers in", () => {
       const tmpfiles = yield setVersionTmp(files, version);
       assert.equal(tmpfiles.length, files.length);
       yield Promise.map(tmpfiles,
-                        (file) => assert.eventually.equal(
+                        file => assert.eventually.equal(
                           sync.getVersion(file).get("version"),
                           version));
     }));
@@ -288,7 +291,7 @@ describe("commiting files and creating tag", () => {
     assert.isTrue(files.length > 0);
     // Check that there are no uncommited files that matter to us.
     const noUnCommitted = !files.some(
-      (file) => file.match(/(?:component|package)\.json/));
+      file => file.match(/(?:component|package)\.json/));
     assert.isTrue(noUnCommitted, "no staged or unstaged files");
 
     result = yield execAsync("git log -1 --pretty=%B");
@@ -406,9 +409,9 @@ describe("Runner", () => {
     }
 
     makeTest("fulfills when there is no error", ["package.json"],
-             (runner) => assert.isFulfilled(runner.verify()));
+             runner => assert.isFulfilled(runner.verify()));
     makeTest("emits a message when there is no error", ["package.json"],
-             (runner) => new Promise((resolve) => {
+             runner => new Promise((resolve) => {
                runner.onMessage((msg) => {
                  assert.equal(
                    cleanOutput(msg),
@@ -418,7 +421,7 @@ describe("Runner", () => {
                runner.verify();
              }));
     makeTest("rejects when there is an error", ["package.json", "amd.js"],
-             (runner) => assert.isRejected(
+             runner => assert.isRejected(
                runner.verify(), Error,
                "Version number is out of sync in amd.js."),
              ["amd.js"]);
@@ -445,9 +448,9 @@ describe("Runner", () => {
     }
 
     makeTest("fulfills when there is no error", ["package.json"],
-             (runner) => assert.isFulfilled(runner.setVersion("9.9.9")));
+             runner => assert.isFulfilled(runner.setVersion("9.9.9")));
     makeTest("emits a message when there is no error", ["package.json"],
-             (runner) => new Promise((resolve) => {
+             runner => new Promise((resolve) => {
                runner.onMessage((msg) => {
                  assert.equal(
                    cleanOutput(msg),
@@ -457,11 +460,11 @@ describe("Runner", () => {
                runner.setVersion("9.9.9");
              }));
     makeTest("actually changes the version number", ["package.json"],
-             (runner) => runner.setVersion("9.9.9").then(() =>
+             runner => runner.setVersion("9.9.9").then(() =>
                assert.eventually.equal(
                  sync.getVersion("package.json").get("version"), "9.9.9")));
     makeTest("rejects when there is an error", ["package.json", "noversion.js"],
-             (runner) => assert.isRejected(
+             runner => assert.isRejected(
                runner.setVersion("9.9.9"), Error,
                "Missing version number in noversion.js."),
              ["noversion.js"]);
@@ -560,14 +563,14 @@ describe("running versync", () => {
 `);
     yield Promise.map(
       tmpfiles,
-      (file) => assert.eventually.equal(sync.getVersion(file).get("version"),
-                                        "0.2.0"));
+      file => assert.eventually.equal(sync.getVersion(file).get("version"),
+                                      "0.2.0"));
   }));
 
   it("verify failure", Promise.coroutine(function *test() {
     yield copyFixturesToTmp(["package.json", "invalid.js", "invalid.ts"]);
 
-    yield execVersync("-v -s invalid.js").catch(err => {
+    yield execVersync("-v -s invalid.js").catch((err) => {
       assert.equal(cleanOutput(err.stdout),
                    "[ERROR] Missing or wrong semver number in " +
                    "invalid.js. Found: version\n");

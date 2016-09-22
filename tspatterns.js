@@ -15,27 +15,22 @@ exports.parse = function parse(filename, data) {
     if (statement.kind !== ts.SyntaxKind.VariableStatement ||
         statement.declarationList.kind !==
         ts.SyntaxKind.VariableDeclarationList) {
-      continue;
+      continue; // eslint-disable-line no-continue
     }
 
     const decls = statement.declarationList.declarations;
     for (let declsIx = 0; declsIx < decls.length; ++declsIx) {
       const node = decls[declsIx];
-      if (node.kind !== ts.SyntaxKind.VariableDeclaration ||
-          node.name.text !== "version") {
-        continue;
-      }
-
       const initializer = node.initializer;
-      if (initializer.kind !== ts.SyntaxKind.StringLiteral) {
-        continue;
+      if (node.kind === ts.SyntaxKind.VariableDeclaration &&
+          node.name.text === "version" &&
+          initializer.kind === ts.SyntaxKind.StringLiteral) {
+        // Bingo!
+        return {
+          version: initializer.text,
+          line: getLine(sourceFile, initializer),
+        };
       }
-
-      // Bingo!
-      return {
-        version: initializer.text,
-        line: getLine(sourceFile, initializer),
-      };
     }
   }
 

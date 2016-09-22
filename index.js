@@ -85,10 +85,10 @@ exports.getSources = function getSources(extraSources) {
   // We support both bower variants and do not add these unless they exist.
   return Promise.filter(["component.json", "bower.json"],
                         source => fs.statAsync(source).catchReturn(false))
-    .then((sources) => ["package.json"].concat(sources))
-    .then((sources) => ((extraSources && extraSources.length) ?
+    .then(sources => ["package.json"].concat(sources))
+    .then(sources => ((extraSources && extraSources.length) ?
           sources.concat(extraSources) : sources))
-    .then((sources) =>
+    .then(sources =>
           fs.readFileAsync("package.json", "utf-8").then((data) => {
             const pkg = JSON.parse(data);
             const versionedSources = pkg.versionedSources;
@@ -110,7 +110,7 @@ exports.getSources = function getSources(extraSources) {
           }))
   // We filter out any duplicates from the srcs array to prevent confusion
   // in the output.
-    .then((sources) => sources.filter(
+    .then(sources => sources.filter(
       (val, idx, arr) => arr.indexOf(val) === idx));
 };
 
@@ -205,8 +205,8 @@ exports.getValidVersion = function getValidVersion(filename) {
  */
 exports.verify = function verify(filenames, expectedVersion) {
   return Promise.filter(filenames,
-    (source) => exports.getValidVersion(source)
-                        .then((current) => current.version !== expectedVersion));
+    source => exports.getValidVersion(source)
+                        .then(current => current.version !== expectedVersion));
 };
 
 
@@ -221,9 +221,9 @@ exports.verify = function verify(filenames, expectedVersion) {
  * @returns {Promise} A promise that resolves once the operation is completed.
  */
 exports.setVersion = function setVersion(filenames, version) {
-  return Promise.all(Promise.map(filenames, (filename) =>
+  return Promise.all(Promise.map(filenames, filename =>
     exports.getVersion(filename).then(
-      (current) => fs.readFileAsync(filename, DEFAULT_ENCODING).then((data) => {
+      current => fs.readFileAsync(filename, DEFAULT_ENCODING).then((data) => {
         if (!current) {
           throw new Error(`Missing version number in ${filename}.`);
         }
@@ -396,7 +396,7 @@ ${version.bold.green}.`);
    */
   setVersion(version) {
     return this.getSources().then(
-      (sources) => exports.setVersion(sources, version).then(() => {
+      sources => exports.setVersion(sources, version).then(() => {
         this._emitMessage(`Version number was updated to ${version.bold.green} \
 in ${sources.join(", ").bold}.`);
       }));
@@ -404,7 +404,7 @@ in ${sources.join(", ").bold}.`);
 
   _commitSourcesAndCreateTag(version) {
     return this.getSources().then(
-      (sources) => Promise.each(sources, (file) => execAsync(`git add ${file}`)))
+      sources => Promise.each(sources, file => execAsync(`git add ${file}`)))
       .then(() => execAsync(`git commit -m 'v${version}'`))
       .then(() => execAsync(`git tag v${version}`))
       .then(() => this._emitMessage(`Files have been committed and tag \
