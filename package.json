@@ -6,7 +6,8 @@
   "keywords": [
     "semver",
     "version",
-    "sync"
+    "sync",
+    "TypeScript"
   ],
   "contributors": [
     {
@@ -20,7 +21,7 @@
   ],
   "license": "MIT",
   "engines": {
-    "node": ">=0.10.0"
+    "node": ">=4"
   },
   "repository": {
     "type": "git",
@@ -28,26 +29,30 @@
   },
   "main": "./index.js",
   "dependencies": {
+    "bluebird": "^3.4.5",
     "colors": "0.6.0-1",
+    "esprima": "^3.0.0",
     "optimist": "0.3.5",
     "semver": "1.1.2",
-    "typescript": "^1.8.10",
-    "uglify-js": "2.2.3"
+    "typescript": "^1.8.10"
   },
   "devDependencies": {
+    "chai": "^3.5.0",
+    "chai-as-promised": "^5.3.0",
     "del": "^2.2.2",
-    "eslint": "^2.13.1",
-    "eslint-config-lddubeau-base": "^0.1.1",
+    "eslint": "^3.0.0",
+    "eslint-config-lddubeau-base": "^1.0.3",
     "fs-extra": "^0.30.0",
+    "mocha": "^3.0.2",
     "mockery": "^1.7.0",
-    "tap": "~0.2.4",
     "typescript": "^1.8.10"
   },
   "bin": {
     "versync": "./bin/versync"
   },
   "scripts": {
-    "test": "tap ./test/*.js --stderr"
+    "test": "npm run lint && mocha",
+    "lint": "eslint *.js bin/versync test/*.js"
   },
   "optionalDependencies": {
     "typescript": "^1.8.10"
