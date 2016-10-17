@@ -1,3 +1,10 @@
+3.1.0:
+
+ - ``typescript`` was erroneously included in the ``dependencies`` list in
+   ``package.json``. It has been removed from the list. It was already in
+   ``optionalDependencies``, which is where it belongs because projects not
+   using ``typescript`` can omit it.
+
 3.0.0:
 
  - Support for ES6.
