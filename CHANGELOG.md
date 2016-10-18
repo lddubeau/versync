@@ -5,6 +5,39 @@
    ``optionalDependencies``, which is where it belongs because projects not
    using ``typescript`` can omit it.
 
+ - API: The ``options`` passed to ``Runner`` now accept an ``onMessage`` option
+   which can be a function or an array of functions. The functions are passed to
+   the ``onMessage`` method at construction time. Where previously one would
+   have done this:
+
+            const runner = new versync.Runner({ verify: true });
+            runner.onMessage(console.log);
+            return runner.run();
+
+   It is now possible to do this:
+
+             const runner = new versync.Runner({
+               verify: true,
+               onMessage: console.log,
+             }
+             return runner.run();
+
+ - API: versync now exports a ``run`` function which takes the same parameters
+   as ``Runner``. Where previously one would have done this:
+
+             const runner = new versync.Runner({
+               verify: true,
+               onMessage: console.log,
+             }
+             return runner.run();
+
+    It is now possible to do:
+
+             return versync.run({
+               verify: true,
+               onMessage: console.log,
+             }
+
 3.0.0:
 
  - Support for ES6.

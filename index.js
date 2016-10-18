@@ -305,12 +305,26 @@ class Runner {
    * name the new version number, preceded by ``v``. Setting this option
    * requires that ``options.bump`` be set to a valid value.
    *
+   * @param {Function|Array.<Function>} [options.onMessage] One or more
+   * functions to be immediately passed to the ``onMessage`` method.
+   *
    */
   constructor(options) {
     this._options = options || {};
     this._emitter = new EventEmitter();
     this._cachedSources = undefined;
     this._cachedCurrent = undefined;
+
+    let onMessage = this._options.onMessage;
+    if (onMessage) {
+      if (typeof onMessage === "function") {
+        onMessage = [onMessage];
+      }
+
+      for (const listener of onMessage) {
+        this.onMessage(listener);
+      }
+    }
   }
 
   _emitMessage(message) {
@@ -440,3 +454,7 @@ ${`v${version}`.bold.green} was created.`));
 }
 
 exports.Runner = Runner;
+
+exports.run = function run(options) {
+  return new Runner(options).run();
+};

@@ -501,32 +501,70 @@ describe("Runner", () => {
       }));
     }
 
-    makeTest("fulfills when there is no error", ["package.json"],
-             () => {
-               const runner = new sync.Runner({
-                 bump: "minor",
-               });
-               return assert.isFulfilled(runner.run());
-             });
-    makeTest("emits messages when there are no errors", ["package.json"],
-             () => {
-               const runner = new sync.Runner({
-                 bump: "minor",
-               });
-               const messages = [];
-               runner.onMessage((msg) => {
-                 messages.push(cleanOutput(msg));
-               });
+    makeTest("fulfills when there is no error", ["package.json"], () => {
+      const runner = new sync.Runner({
+        bump: "minor",
+      });
+      return assert.isFulfilled(runner.run());
+    });
 
-               return runner.run({
-                 bump: "minor",
-               }).then(() => {
-                 assert.deepEqual(messages, [
-                   "Everything is in sync, the version number is 0.0.1.",
-                   "Version number was updated to 0.1.0 in package.json.",
-                 ]);
-               });
-             });
+    makeTest("emits messages when there are no errors", ["package.json"], () => {
+      const runner = new sync.Runner({
+        bump: "minor",
+      });
+      const messages = [];
+      runner.onMessage((msg) => {
+        messages.push(cleanOutput(msg));
+      });
+
+      return runner.run({
+        bump: "minor",
+      }).then(() => {
+        assert.deepEqual(messages, [
+          "Everything is in sync, the version number is 0.0.1.",
+          "Version number was updated to 0.1.0 in package.json.",
+        ]);
+      });
+    });
+
+    makeTest("accepts onMessage as function", ["package.json"], () => {
+      const messages = [];
+      const runner = new sync.Runner({
+        bump: "minor",
+        onMessage: (msg) => {
+          messages.push(cleanOutput(msg));
+        },
+      });
+
+      return runner.run({
+        bump: "minor",
+      }).then(() => {
+        assert.deepEqual(messages, [
+          "Everything is in sync, the version number is 0.0.1.",
+          "Version number was updated to 0.1.0 in package.json.",
+        ]);
+      });
+    });
+
+    makeTest("accepts onMessage as array", ["package.json"], () => {
+      const messages = [];
+      const runner = new sync.Runner({
+        bump: "minor",
+        onMessage: [(msg) => {
+          messages.push(cleanOutput(msg));
+        }],
+      });
+
+      return runner.run({
+        bump: "minor",
+      }).then(() => {
+        assert.deepEqual(messages, [
+          "Everything is in sync, the version number is 0.0.1.",
+          "Version number was updated to 0.1.0 in package.json.",
+        ]);
+      });
+    });
+
     makeTest("rejects when there is an error", ["package.json", "noversion.js"],
              () => {
                const runner = new sync.Runner({
@@ -538,6 +576,41 @@ describe("Runner", () => {
              },
              ["noversion.js"]);
   });
+});
+
+describe("run", () => {
+  after(() => del([tmpdir]));
+
+  beforeEach(() => del([tmpdir]).then(() => fs.ensureDirAsync(tmpdir)));
+
+  function makeTest(name, fixtures, fn, versionedSources) {
+    it(name, Promise.coroutine(function *_test() {
+      yield copyFixturesToTmp(fixtures);
+
+      const prevdir = process.cwd(); // eslint-disable-line no-shadow
+      try {
+        process.chdir("tmp");
+        if (versionedSources) {
+          yield setVersionedSources(versionedSources);
+        }
+        yield fn(fixtures);
+      }
+      finally {
+        process.chdir(prevdir);
+      }
+    }));
+  }
+
+  makeTest("fulfills when there is no error", ["package.json"], () =>
+    assert.isFulfilled(sync.run({
+      bump: "minor",
+    })));
+
+  makeTest("rejects when there is an error", ["package.json", "noversion.js"],
+           () => assert.isRejected(sync.run({
+             verify: true,
+           }), Error, "Missing version number in noversion.js."),
+           ["noversion.js"]);
 });
 
 // "End-to-end" tests.
