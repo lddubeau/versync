@@ -1,3 +1,7 @@
+3.1.1:
+
+ - Updated the ``typescript`` dependency to allow TypeScript 2.x.
+
 3.1.0:
 
  - ``typescript`` was erroneously included in the ``dependencies`` list in

@@ -44,7 +44,7 @@
     "fs-extra": "^0.30.0",
     "mocha": "^3.0.2",
     "mockery": "^1.7.0",
-    "typescript": "^1.8.10"
+    "typescript": ">=1.8.10 <3"
   },
   "bin": {
     "versync": "./bin/versync"
@@ -54,6 +54,6 @@
     "lint": "eslint *.js bin/versync test/*.js"
   },
   "optionalDependencies": {
-    "typescript": "^1.8.10"
+    "typescript": ">=1.8.10 <3"
   }
 }
