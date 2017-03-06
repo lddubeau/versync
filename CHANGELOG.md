@@ -2,6 +2,8 @@
 
  - Updated the ``typescript`` dependency to allow TypeScript 2.x.
 
+ - Added ``index.d.ts`` so that it can be used from TypeScript code.
+
 3.1.0:
 
  - ``typescript`` was erroneously included in the ``dependencies`` list in
