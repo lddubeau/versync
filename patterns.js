@@ -1,5 +1,7 @@
 /* global require exports */
+
 "use strict";
+
 const esprima = require("esprima");
 
 function isObjectLiteral(node) {
@@ -20,7 +22,7 @@ function extractVersionProperty(properties) {
 }
 
 function unparseMemberExpression(node) {
-  const object = node.object;
+  const { object } = node;
   const unparsedObject = (object.type === "MemberExpression") ?
         unparseMemberExpression(object) : object.name;
   return `${unparsedObject}.${node.property.name}`;
@@ -53,7 +55,7 @@ patterns.push((source, node) => {
 patterns.push((source, node) => {
   // matching export ...
   if (node.type === "ExportNamedDeclaration") {
-    const declarations = node.declaration.declarations;
+    const { declarations } = node.declaration;
 
     for (let i = 0; i < declarations.length; ++i) {
       const declaration = declarations[i];

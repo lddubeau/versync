@@ -1,5 +1,7 @@
 /* global require exports */
+
 "use strict";
+
 const ts = require("typescript");
 
 function getLine(sourceFile, node) {
@@ -9,7 +11,7 @@ function getLine(sourceFile, node) {
 
 exports.parse = function parse(filename, data) {
   const sourceFile = ts.createSourceFile(filename, data);
-  const statements = sourceFile.statements;
+  const { statements } = sourceFile;
   for (let statementsIx = 0; statementsIx < statements.length; ++statementsIx) {
     const statement = statements[statementsIx];
     if (statement.kind !== ts.SyntaxKind.VariableStatement ||
@@ -21,7 +23,7 @@ exports.parse = function parse(filename, data) {
     const decls = statement.declarationList.declarations;
     for (let declsIx = 0; declsIx < decls.length; ++declsIx) {
       const node = decls[declsIx];
-      const initializer = node.initializer;
+      const { initializer } = node;
       if (node.kind === ts.SyntaxKind.VariableDeclaration &&
           node.name.text === "version" &&
           initializer.kind === ts.SyntaxKind.StringLiteral) {

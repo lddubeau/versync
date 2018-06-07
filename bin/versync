@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
 /* global require process */
+
 "use strict";
+
 const sync = require("../");
 const fs = require("fs");
 const optimist = require("optimist");
@@ -12,7 +14,7 @@ require("colors");
 const ERROR = "[ERROR] ".bold.red;
 const SUCCESS = "[OK] ".bold.green;
 
-const argv = optimist
+const { argv } = optimist
     .usage(`Synchronizes version numbers accross package.json, component.json \
 and other source files of your choosing.
 Usage: ${"versync -s [source list] -b [release type].".bold}`)
@@ -46,8 +48,7 @@ with the current version. It can take one of the following values: \
 ${"major, minor, patch".bold}. Alternatively you can specify a custom version \
 that is higher than the current one. If no value is specified, it defaults to \
 ${"patch".bold}.`,
-      })
-        .argv;
+      });
 
 if (argv.help || (!argv.verify && !argv.bump && !argv.tag)) {
   console.log(`Running ${"versync".bold.green} version \

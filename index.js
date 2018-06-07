@@ -1,12 +1,14 @@
 /* global require exports */
+
 "use strict";
-const exec = require("child_process").exec;
+
+const { exec } = require("child_process");
 const Promise = require("bluebird");
 const fs = require("fs-extra");
 const path = require("path");
 const patterns = require("./patterns");
 const semver = require("semver");
-const EventEmitter = require("events").EventEmitter;
+const { EventEmitter } = require("events");
 require("colors");
 
 // We separate require("typescript") and require("./tspatterns") so that errors
@@ -19,7 +21,7 @@ catch (ex) {} // eslint-disable-line no-empty
 
 let tspatterns;
 if (typescript) {
-  tspatterns = require("./tspatterns");  // eslint-disable-line global-require
+  tspatterns = require("./tspatterns"); // eslint-disable-line global-require
 }
 
 const DEFAULT_SEPARATOR = "\n";
@@ -89,7 +91,7 @@ exports.getSources = function getSources(extraSources) {
     .then(sources =>
           fs.readFile("package.json", "utf-8").then((data) => {
             const pkg = JSON.parse(data);
-            const versionedSources = pkg.versionedSources;
+            const { versionedSources } = pkg;
             if (versionedSources) {
               if (versionedSources instanceof Array) {
                 sources = sources.concat(versionedSources);
@@ -206,7 +208,7 @@ exports.getValidVersion = function getValidVersion(filename) {
  */
 exports.verify = function verify(filenames, expectedVersion) {
   return Promise.filter(filenames,
-    source => exports.getValidVersion(source)
+                        source => exports.getValidVersion(source)
                         .then(current => current.version !== expectedVersion));
 };
 
@@ -316,7 +318,7 @@ class Runner {
     this._cachedSources = undefined;
     this._cachedCurrent = undefined;
 
-    let onMessage = this._options.onMessage;
+    let { onMessage } = this._options;
     if (onMessage) {
       if (typeof onMessage === "function") {
         onMessage = [onMessage];
@@ -352,7 +354,7 @@ class Runner {
       this.getCurrent(),
       this.getSources(),
       (current, sources) => {
-        const version = current.version;
+        const { version } = current;
         return exports.verify(sources, version).then((errSources) => {
           if (errSources.length > 0) {
             throw new Error(`Version number is out of sync in \
@@ -434,11 +436,9 @@ ${`v${version}`.bold.green} was created.`));
    * successful, or rejects if they are not.
    */
   run() {
-    const options = this._options;
-    const bump = options.bump;
-    const tag = options.tag;
+    const { bump, tag, verify } = this._options;
     return Promise
-      .try(() => ((options.verify || bump || tag) ? this.verify() : undefined))
+      .try(() => ((verify || bump || tag) ? this.verify() : undefined))
       .then(() => this.getCurrent())
       .get("version")
       .then((version) => {

@@ -1,8 +1,9 @@
 /* global require describe it process before beforeEach after */
 /* eslint-env mocha */
+
 "use strict";
 
-const exec = require("child_process").exec;
+const { exec } = require("child_process");
 const sync = require("../");
 const del = require("del");
 const fs = require("fs-extra");
@@ -13,11 +14,11 @@ const chai = require("chai");
 const chaiAsPromised = require("chai-as-promised");
 
 chai.use(chaiAsPromised);
-const assert = chai.assert;
+const { assert } = chai;
 
 function execAsync(command, options) {
   options = options || {};
-  const silentFailure = options.silentFailure;
+  const { silentFailure } = options;
   delete options.silentFailure;
 
   return new Promise((resolve, reject) => {
@@ -158,8 +159,7 @@ describe("setVersion sets version numbers in", () => {
     }));
   }
 
-  test("json files", ["component.json", "package.json"],
-      "0.0.5");
+  test("json files", ["component.json", "package.json"], "0.0.5");
   test("topojson.js", ["complete/topojson.js"], "0.0.11");
   test("TypeScript module", ["tsmodule.ts"], "0.1.0");
   test("an es6 file", ["es6-export.js"], "0.1.0");
@@ -223,7 +223,7 @@ describe("verify", () => {
       fixtures = fixtures.map(toFixture);
       expected = expected.map(toFixture);
       return assert.eventually.sameMembers(sync.verify(fixtures, version),
-                                          expected);
+                                           expected);
     });
   }
 
@@ -294,8 +294,7 @@ describe("commiting files and creating tag", () => {
   makeTest("works", Promise.coroutine(function *_test() {
     const runner = new sync.Runner();
     yield runner._commitSourcesAndCreateTag("0.0.2");
-    let result = yield execAsync("git status -s");
-    let stdout = result.stdout;
+    let { stdout } = yield execAsync("git status -s");
 
     const files = stdout.split("\n");
     assert.isTrue(files.length > 0);
@@ -304,14 +303,12 @@ describe("commiting files and creating tag", () => {
       file => file.match(/(?:component|package)\.json/));
     assert.isTrue(noUnCommitted, "no staged or unstaged files");
 
-    result = yield execAsync("git log -1 --pretty=%B");
-    stdout = result.stdout;
+    ({ stdout } = yield execAsync("git log -1 --pretty=%B"));
 
     const commit = stdout.replace(/\n/g, "");
     assert.equal(commit, "v0.0.2", "commit correctly created");
 
-    result = yield execAsync("git describe --abbrev=0 --tags");
-    stdout = result.stdout;
+    ({ stdout } = yield execAsync("git describe --abbrev=0 --tags"));
 
     const tag = stdout.replace(/\n/g, "");
     assert.equal(tag, "v0.0.2", "tag correctly created");
