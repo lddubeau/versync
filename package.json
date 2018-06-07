@@ -43,7 +43,7 @@
     "eslint": "^3.0.0",
     "eslint-config-lddubeau-base": "^1.0.3",
     "mocha": "^5.2.0",
-    "mockery": "^1.7.0",
+    "mockery": "^2.1.0",
     "typescript": ">=1.8.10 <3"
   },
   "bin": {
