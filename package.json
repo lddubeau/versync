@@ -37,11 +37,14 @@
     "semver": "^5.5.0"
   },
   "devDependencies": {
+    "@commitlint/cli": "^7.0.0",
+    "@commitlint/config-angular": "^7.0.1",
     "chai": "^4.1.2",
     "chai-as-promised": "^7.1.1",
     "del": "^3.0.0",
     "eslint": "^4.19.1",
     "eslint-config-lddubeau-base": "^2.0.1",
+    "husky": "^0.14.3",
     "mocha": "^5.2.0",
     "mockery": "^2.1.0",
     "typescript": ">=1.8.10 <3"
@@ -51,7 +54,8 @@
   },
   "scripts": {
     "test": "npm run lint && mocha",
-    "lint": "eslint *.js bin/versync test/*.js"
+    "lint": "eslint *.js bin/versync test/*.js",
+    "commitmsg": "commitlint -e $GIT_PARAMS"
   },
   "optionalDependencies": {
     "typescript": ">=1.8.10 <3"
