@@ -166,17 +166,20 @@ exports.getVersion = Promise.method((filename) => {
  * @param {string} filename The name of the file from which to extract a
  * version.
  *
- * @return {VersionInfo} The version information or ``undefined`` if no version
- * can be found or if the version is not a valid semver version.
+ * @return {VersionInfo} The version information.
  *
  * @throws {InvalidVersionError} If the version is not a valid semver version.
  */
 exports.getValidVersion = function getValidVersion(filename) {
   return exports.getVersion(filename).then((current) => {
     const version = current && current.version;
+    if (!version) {
+      throw new InvalidVersionError(`Missing version number in ${filename}.`);
+    }
+
     if (!semver.valid(version)) {
       throw new InvalidVersionError(
-        `Missing or wrong semver number in ${filename}. Found: ${version}`);
+        `Invalid semver number in ${filename}. Found: ${version}`);
     }
 
     return current;

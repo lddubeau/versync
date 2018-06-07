@@ -435,7 +435,7 @@ describe("Runner", () => {
     makeTest("rejects when there is an error", ["package.json", "amd.js"],
              runner => assert.isRejected(
                runner.verify(), Error,
-               "Version number is out of sync in amd.js."),
+               `Version number is out of sync in ${"amd.js".red}.`),
              ["amd.js"]);
   });
 
@@ -658,8 +658,8 @@ describe("running versync", () => {
 
     yield execVersync("-v -s invalid.js", true).catch((err) => {
       assert.equal(cleanOutput(err.stdout),
-                   "[ERROR] Missing or wrong semver number in " +
-                   "invalid.js. Found: version\n");
+                   "[ERROR] Invalid semver number in invalid.js. " +
+                   "Found: version\n");
     });
   }));
 });
