@@ -6,7 +6,7 @@
 
 const sync = require("../");
 const fs = require("fs");
-const optimist = require("optimist");
+const { ArgumentParser } = require("argparse");
 require("colors");
 
 /* eslint-disable no-console */
@@ -14,47 +14,52 @@ require("colors");
 const ERROR = "[ERROR] ".bold.red;
 const SUCCESS = "[OK] ".bold.green;
 
-const { argv } = optimist
-    .usage(`Synchronizes version numbers accross package.json, component.json \
-and other source files of your choosing.
-Usage: ${"versync -s [source list] -b [release type].".bold}`)
-      .option("b", {
-        alias: "bump",
-        describe: `Bump the version number in package.json, component.json \
+const parser = new ArgumentParser({
+  addHelp: true,
+  description: "Synchronizes version numbers accross package.json, \
+component.json and other source files of your choosing.",
+});
+
+parser.addArgument(["-b", "--bump"], {
+  help: `Bump the version number in package.json, component.json \
 and all other specified source files. It can take one of the following \
 values: ${"major, minor, patch".bold}. Alternatively you can specify a \
 custom version that is higher than the current one. If no value is specified, \
 it defaults to ${"patch".bold}.`,
-      })
-      .option("s", {
-        alias: "sources",
-        describe: "Declare the JavaScript files in which the version number \
+  nargs: "?",
+});
+
+parser.addArgument(["-s", "--sources"], {
+  help: "Declare the JavaScript files in which the version number \
 will be updated. If not explicitly specified, it is read from the package.json \
 \"versionedSources\" property. If it's not present in the package.json and \
 not explicitly specified, only component.json and package.json will be synced. \
 Optional.",
-      })
-      .option("v", {
-        alias: "verify",
-        describe: "Verifies that package.json, component.json and all other \
+});
+
+parser.addArgument(["-v", "--verify"], {
+  help: "Verifies that package.json, component.json and all other \
 source files have the same version number and checks if it conforms to the \
 semver specification.",
-      })
-      .option("t", {
-        alias: "tag",
-        describe: `Bump the version number, commit the changes to package.json, \
+  action: "storeTrue",
+});
+
+parser.addArgument(["-t", "--tag"], {
+  help: `Bump the version number, commit the changes to package.json, \
 component.json and all other specified source files and create a git tag \
 with the current version. It can take one of the following values: \
 ${"major, minor, patch".bold}. Alternatively you can specify a custom version \
 that is higher than the current one. If no value is specified, it defaults to \
 ${"patch".bold}.`,
-      });
+  nargs: "?",
+});
 
-if (argv.help || (!argv.verify && !argv.bump && !argv.tag)) {
-  console.log(`Running ${"versync".bold.green} version \
-${sync.version.bold.green}.\n`);
-  console.log(optimist.help());
-  process.exit(0);
+const argv = parser.parseArgs();
+
+if (!(argv.verify || argv.bump || argv.tag)) {
+  console.log("Must specify one of -v, -b or -t.");
+  parser.printHelp();
+  process.exit(1);
 }
 
 if (argv.tag && !argv.bump) {
