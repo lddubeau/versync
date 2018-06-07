@@ -438,7 +438,7 @@ ${`v${version}`.bold.green} was created.`));
   run() {
     const { bump, tag, verify } = this._options;
     return Promise
-      .try(() => ((verify || bump || tag) ? this.verify() : undefined))
+      .try(() => ((verify || bump) ? this.verify() : undefined))
       .then(() => this.getCurrent())
       .get("version")
       .then((version) => {

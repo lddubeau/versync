@@ -76,7 +76,7 @@ versync -b 3.0.0-rc1
 If you want to update the version number automatically in all the files, commit the changes and create a new git tag, you can do:
 
 ````
-versync -t
+versync -b -t
 [OK] Version number was updated to 1.2.4 in package.json, component.json, mypackage.js.
 [OK] Files have been commited and tag v1.2.4 was created.
 ````
@@ -93,18 +93,36 @@ The binary uses [node-optimist](https://github.com/substack/node-optimist) to pa
 
 ## Console help
 
-Usage: **`versync -s [source list] -b [release type]`**.
+```
+usage: versync [-h] [-b [BUMP]] [-s SOURCES] [-v] [-t]
 
-Options:
+Synchronizes version numbers accross package.json, component.json and other
+source files of your choosing.
 
-* `-b, --bump`
-   Bump the version number in package.json, component.json and all other specified source files. It can take one of the following values: `major`, `minor`, `patch`. Alternatively you can specify a custom version that is higher than the current one. If no value is specified, it defaults to `patch`.
-* `-v, --verify`
-   Verifies that package.json, component.json and all other source files have the same version number and checks if it conforms to the semver specification.
-* `-s, --sources`
-  Declare additional files in which the version number will be updated or checked. If not explicitly specified, it is read from the package.json "versionedSources" property. If it's not present in the package.json and not explicitly specified, only component.json and package.json will be synced.
-* `-t, --tag`
-  Bump the version number, commit the changes to package.json, component.json and all other specified source files and create a git tag with the current version. It can take one of the following values: `major`, `minor`, `patch`. Alternatively you can specify a custom version that is higher than the current one. If no value is specified, it defaults to `patch`.
+Optional arguments:
+  -h, --help            Show this help message and exit.
+  -b [BUMP], --bump [BUMP]
+                        Bump the version number in package.json, component.
+                        json and all other specified source files. It can
+                        take one of the following values: major, minor,
+                        patch. Alternatively you can specify a custom
+                        version that is higher than the current one. If no
+                        value is specified, it defaults to patch.
+  -s SOURCES, --sources SOURCES
+                        Declare the JavaScript files in which the version
+                        number will be updated. If not explicitly specified,
+                        it is read from the package.json "versionedSources"
+                        property. If it's not present in the package.json and
+                        not explicitly specified, only component.json and
+                        package.json will be synced. Optional.
+  -v, --verify          Verifies that package.json, component.json and all
+                        other source files have the same version number and
+                        checks if it conforms to the semver specification.
+  -t, --tag             After bumping the version number, commit the changes
+                        to package.json, component.json and all other
+                        specified source files and create a git tag with the
+                        current version.
+```
 
 ## API
 

@@ -45,25 +45,24 @@ semver specification.",
 });
 
 parser.addArgument(["-t", "--tag"], {
-  help: `Bump the version number, commit the changes to package.json, \
+  help: "After bumping the version number, commit the changes to package.json, \
 component.json and all other specified source files and create a git tag \
-with the current version. It can take one of the following values: \
-${"major, minor, patch".bold}. Alternatively you can specify a custom version \
-that is higher than the current one. If no value is specified, it defaults to \
-${"patch".bold}.`,
-  nargs: "?",
+with the current version.",
+  action: "storeTrue",
 });
 
 const argv = parser.parseArgs();
 
-if (!(argv.verify || argv.bump || argv.tag)) {
-  console.log("Must specify one of -v, -b or -t.");
+if (!argv.bump && argv.tag) {
+  console.log("The option -t is not valid without -b");
   parser.printHelp();
   process.exit(1);
 }
 
-if (argv.tag && !argv.bump) {
-  argv.bump = argv.tag;
+if (!(argv.verify || argv.bump)) {
+  console.log("Must specify one of -v, -b.");
+  parser.printHelp();
+  process.exit(1);
 }
 
 if (argv.bump === true) {
