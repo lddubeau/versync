@@ -1,15 +1,13 @@
 /* global require exports */
 "use strict";
 const exec = require("child_process").exec;
-const fs = require("fs");
 const Promise = require("bluebird");
+const fs = require("fs-extra");
 const path = require("path");
 const patterns = require("./patterns");
 const semver = require("semver");
 const EventEmitter = require("events").EventEmitter;
 require("colors");
-
-Promise.promisifyAll(fs);
 
 // We separate require("typescript") and require("./tspatterns") so that errors
 // with the latter are not disguised as problems with the typescript package.
@@ -84,12 +82,12 @@ function execAsync(command, options) {
 exports.getSources = function getSources(extraSources) {
   // We support both bower variants and do not add these unless they exist.
   return Promise.filter(["component.json", "bower.json"],
-                        source => fs.statAsync(source).catchReturn(false))
+                        source => fs.stat(source).catch(() => false))
     .then(sources => ["package.json"].concat(sources))
     .then(sources => ((extraSources && extraSources.length) ?
           sources.concat(extraSources) : sources))
     .then(sources =>
-          fs.readFileAsync("package.json", "utf-8").then((data) => {
+          fs.readFile("package.json", "utf-8").then((data) => {
             const pkg = JSON.parse(data);
             const versionedSources = pkg.versionedSources;
             if (versionedSources) {
@@ -144,7 +142,7 @@ exports.getVersion = Promise.method((filename) => {
                     "please install it.");
   }
 
-  return fs.readFileAsync(filename, DEFAULT_ENCODING).then((data) => {
+  return fs.readFile(filename, DEFAULT_ENCODING).then((data) => {
     if (ext === "json" || ext === "js") {
       if (ext === "json") {
         data = `(${data})`;
@@ -226,15 +224,15 @@ exports.verify = function verify(filenames, expectedVersion) {
 exports.setVersion = function setVersion(filenames, version) {
   return Promise.all(Promise.map(filenames, filename =>
     exports.getVersion(filename).then(
-      current => fs.readFileAsync(filename, DEFAULT_ENCODING).then((data) => {
+      current => fs.readFile(filename, DEFAULT_ENCODING).then((data) => {
         if (!current) {
           throw new Error(`Missing version number in ${filename}.`);
         }
         const lines = data.split(DEFAULT_SEPARATOR);
         const ix = current.line - 1;
         lines[ix] = lines[ix].replace(current.version, version);
-        return fs.writeFileAsync(filename, lines.join(DEFAULT_SEPARATOR),
-                                 DEFAULT_ENCODING);
+        return fs.writeFile(filename, lines.join(DEFAULT_SEPARATOR),
+                            DEFAULT_ENCODING);
       }))));
 };
 

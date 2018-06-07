@@ -5,7 +5,7 @@
 const exec = require("child_process").exec;
 const sync = require("../");
 const del = require("del");
-let fs = require("fs-extra");
+const fs = require("fs-extra");
 const path = require("path");
 const mockery = require("mockery");
 const Promise = require("bluebird");
@@ -14,8 +14,6 @@ const chaiAsPromised = require("chai-as-promised");
 
 chai.use(chaiAsPromised);
 const assert = chai.assert;
-
-fs = Promise.promisifyAll(fs);
 
 function execAsync(command, options) {
   options = options || {};
@@ -134,7 +132,7 @@ function copyFixturesToTmp(files) {
   return Promise.map(files, (filename) => {
     const fullpath = toFixture(filename);
     const tmpfile = path.join(tmpdir, filename);
-    return fs.copyAsync(fullpath, tmpfile).return(tmpfile);
+    return fs.copy(fullpath, tmpfile).then(() => tmpfile);
   });
 }
 
@@ -142,7 +140,7 @@ describe("setVersion sets version numbers in", () => {
   const setVersionTmp = Promise.coroutine(function *setVersionTmp(
     files, version) {
     yield del([tmpdir]);
-    yield fs.ensureDirAsync(tmpdir);
+    yield fs.ensureDir(tmpdir);
     const tmpfiles = yield copyFixturesToTmp(files);
 
     return sync.setVersion(tmpfiles, version).return(tmpfiles);
@@ -168,21 +166,21 @@ describe("setVersion sets version numbers in", () => {
 });
 
 function setVersionedSources(value) {
-  return fs.readFileAsync("package.json").then((data) => {
+  return fs.readFile("package.json").then((data) => {
     const fixture = JSON.parse(data);
     if (fixture.name === "versync") {
       throw new Error("looks like you are trying to modify versync's own " +
                       "package.json");
     }
     fixture.versionedSources = value;
-    return fs.writeFileAsync("package.json", JSON.stringify(fixture));
+    return fs.writeFile("package.json", JSON.stringify(fixture));
   });
 }
 
 describe("getSources", () => {
   after(() => del([tmpdir]));
 
-  beforeEach(() => del([tmpdir]).then(() => fs.ensureDirAsync(tmpdir)));
+  beforeEach(() => del([tmpdir]).then(() => fs.ensureDir(tmpdir)));
 
   // versionedSources is an optional value we can use to alter
   // the versionedSources value in the package.json file.
@@ -264,7 +262,7 @@ describe("bumpVersion", () => {
 describe("commiting files and creating tag", () => {
   after(() => del([tmpdir]));
 
-  beforeEach(() => del([tmpdir]).then(() => fs.ensureDirAsync(tmpdir)));
+  beforeEach(() => del([tmpdir]).then(() => fs.ensureDir(tmpdir)));
 
   function makeTest(name, fn) {
     const fixtures = ["package.json", "component.json"];
@@ -281,7 +279,7 @@ describe("commiting files and creating tag", () => {
         yield execAsync("git add .");
         yield execAsync("git commit -m'Initial commit.'");
 
-        yield fs.writeFileAsync("test.txt", "");
+        yield fs.writeFile("test.txt", "");
 
         yield sync.setVersion(fixtures, "0.0.2");
 
@@ -337,7 +335,7 @@ function cleanOutput(output) {
 describe("Runner", () => {
   after(() => del([tmpdir]));
 
-  beforeEach(() => del([tmpdir]).then(() => fs.ensureDirAsync(tmpdir)));
+  beforeEach(() => del([tmpdir]).then(() => fs.ensureDir(tmpdir)));
 
   describe("getSources", () => {
     function makeTest(name, fixtures, versionedSources, options) {
@@ -581,7 +579,7 @@ describe("Runner", () => {
 describe("run", () => {
   after(() => del([tmpdir]));
 
-  beforeEach(() => del([tmpdir]).then(() => fs.ensureDirAsync(tmpdir)));
+  beforeEach(() => del([tmpdir]).then(() => fs.ensureDir(tmpdir)));
 
   function makeTest(name, fixtures, fn, versionedSources) {
     it(name, Promise.coroutine(function *_test() {
@@ -619,7 +617,7 @@ describe("running versync", () => {
 
   after(() => del([tmpdir]));
 
-  beforeEach(() => del([tmpdir]).then(() => fs.ensureDirAsync(tmpdir)));
+  beforeEach(() => del([tmpdir]).then(() => fs.ensureDir(tmpdir)));
 
   function execVersync(args, silent) {
     options.silentFailure = silent;
