@@ -57,7 +57,7 @@
     "test": "npm run lint && mocha",
     "lint": "eslint *.js bin/versync test/*.js",
     "commitmsg": "commitlint -e $GIT_PARAMS",
-    "version": "./bin/versync -b sync && conventional-changelog -p angular -i CHANGELOG.md -s && git add CHANGELOG.md"
+    "version": "./bin/versync -b sync && git add index.js && conventional-changelog -p angular -i CHANGELOG.md -s && git add CHANGELOG.md"
   },
   "optionalDependencies": {
     "typescript": ">=1.8.10 <3"
