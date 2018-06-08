@@ -218,21 +218,45 @@ describe("getSources", () => {
 });
 
 describe("verify", () => {
-  function makeTest(name, fixtures, version, expected) {
-    it(name, () => {
-      fixtures = fixtures.map(toFixture);
-      expected = expected.map(toFixture);
-      return assert.eventually.sameMembers(sync.verify(fixtures, version),
-                                           expected);
-    });
+  function makeTest(name, fixtures, expected) {
+    it(name, () =>
+       (expected ?
+        assert.eventually.deepEqual(sync.verify(fixtures.map(toFixture)),
+                                    expected) :
+        assert.eventually.isFalse(sync.verify(fixtures.map(toFixture)))));
   }
 
-  makeTest("no error", ["package.json", "tsmodule.ts"], "0.0.1", []);
-  makeTest("different version", ["package.json"], "0.10.0", ["package.json"]);
-  makeTest("inconsistent versions", ["package.json", "amd.js"], "0.0.1",
-           ["amd.js"]);
+  it("empty array", () => {
+    assert.isRejected(sync.verify([]),
+                      Error, "tried to call verify with an empty array");
+  });
 
-  it("bad version", () => assert.isRejected(sync.verify(["invalid.js"], "0.0.1"),
+  makeTest("no error", ["package.json", "tsmodule.ts"], {
+    consistent: true,
+    versions: [{
+      source: "fixtures/package.json",
+      version: "0.0.1",
+      line: 4,
+    }, {
+      source: "fixtures/tsmodule.ts",
+      version: "0.0.1",
+      line: 10,
+    }],
+  });
+  makeTest("inconsistent versions", ["package.json", "amd.js"], {
+    consistent: false,
+    versions: [{
+      source: "fixtures/package.json",
+      version: "0.0.1",
+      line: 4,
+    }, {
+      source: "fixtures/amd.js",
+      version: "0.9.0",
+      line: 2,
+    }],
+  });
+
+  it("bad version", () => assert.isRejected(sync.verify(["invalid.js"]),
                                             Error));
 });
 
@@ -372,6 +396,53 @@ describe("Runner", () => {
              });
   });
 
+  describe("getSourcesToModify", () => {
+    function _makeTest(name, fixtures, versionedSources, options) {
+      it(name, Promise.coroutine(function *_test() {
+        const runner = new sync.Runner(options);
+        yield copyFixturesToTmp(fixtures);
+
+        const prevdir = process.cwd(); // eslint-disable-line no-shadow
+        try {
+          process.chdir("tmp");
+          if (versionedSources) {
+            yield setVersionedSources(versionedSources);
+          }
+          yield assert.eventually.sameMembers(
+            runner.getSourcesToModify(),
+            options.bump === "sync" ?
+              fixtures.filter(x => x !== "package.json") :
+              fixtures);
+        }
+        finally {
+          process.chdir(prevdir);
+        }
+      }));
+    }
+
+    function makeTest(name, fixtures, versionedSources, options) {
+      options = options || {};
+      _makeTest(`${name} (not-sync)`, fixtures, versionedSources, options);
+      _makeTest(`${name} (sync)`, fixtures, versionedSources,
+                { ...options, bump: "sync" });
+    }
+
+    makeTest("includes package.json by default", ["package.json"]);
+    makeTest("includes component.json if present", ["package.json",
+                                                    "component.json"]);
+    makeTest("includes bower.json if present", ["package.json", "bower.json"]);
+    makeTest("includes files in versionedSources",
+             ["package.json", "tsmodule.ts"], ["tsmodule.ts"]);
+    makeTest("includes files in options",
+             ["package.json", "tsmodule.ts"], undefined, {
+               sources: ["tsmodule.ts"],
+             });
+    makeTest("does not duplicate files",
+             ["package.json", "tsmodule.ts"], ["tsmodule.ts"], {
+               sources: ["tsmodule.ts"],
+             });
+  });
+
   describe("getCurrent", () => {
     function makeTest(name, fixtures, expected) {
       it(name, Promise.coroutine(function *_test() {
@@ -391,14 +462,15 @@ describe("Runner", () => {
 
     makeTest("returns a correct value", ["package.json"], {
       version: "0.0.1",
+      source: "package.json",
       line: 4,
     });
   });
 
   describe("verify", () => {
-    function makeTest(name, fixtures, fn, versionedSources) {
+    function makeTest(name, fixtures, fn, versionedSources, bump) {
       it(name, Promise.coroutine(function *_test() {
-        const runner = new sync.Runner();
+        const runner = new sync.Runner({ bump });
         yield copyFixturesToTmp(fixtures);
 
         const prevdir = process.cwd(); // eslint-disable-line no-shadow
@@ -416,13 +488,18 @@ describe("Runner", () => {
     }
 
     makeTest("fulfills when there is no error", ["package.json"],
-             runner => assert.isFulfilled(runner.verify()));
+             runner => assert.eventually.equal(runner.verify(), "0.0.1"));
     makeTest("emits a message when there is no error", ["package.json"],
-             runner => new Promise((resolve) => {
+             runner => new Promise((resolve, reject) => {
                runner.onMessage((msg) => {
-                 assert.equal(
-                   cleanOutput(msg),
-                   "Everything is in sync, the version number is 0.0.1.");
+                 try {
+                   assert.equal(
+                     cleanOutput(msg),
+                     "Everything is in sync, the version number is 0.0.1.");
+                 }
+                 catch (ex) {
+                   reject(ex);
+                 }
                  resolve();
                });
                runner.verify();
@@ -430,8 +507,28 @@ describe("Runner", () => {
     makeTest("rejects when there is an error", ["package.json", "amd.js"],
              runner => assert.isRejected(
                runner.verify(), Error,
-               `Version number is out of sync in ${"amd.js".red}.`),
+               `Version numbers are inconsistent:
+package.json:1: ${"0.0.1".red}
+amd.js:2: ${"0.9.0".red}
+`),
              ["amd.js"]);
+    makeTest("does not check package when bump = \"sync\"",
+             ["package.json", "amd.js"],
+             runner => new Promise((resolve, reject) => {
+               runner.onMessage((msg) => {
+                 try {
+                   assert.equal(
+                     cleanOutput(msg),
+                     "Version number in files to be synced is 0.9.0.");
+                 }
+                 catch (ex) {
+                   reject(ex);
+                 }
+                 resolve();
+               });
+               runner.verify();
+             }),
+             ["amd.js"], "sync");
   });
 
   describe("setVersion", () => {
@@ -641,6 +738,53 @@ describe("running versync", () => {
     assertGood(result, `\
 [OK] Everything is in sync, the version number is 0.0.1.
 [OK] Version number was updated to 0.2.0 in package.json, component.json.
+`);
+    yield Promise.map(
+      tmpfiles,
+      file => assert.eventually.equal(sync.getVersion(file).get("version"),
+                                      "0.2.0"));
+  }));
+
+  it("bump = \"sync\" fails on lower version",
+     Promise.coroutine(function *test() {
+       yield copyFixturesToTmp(["package.json", "assigned.js", "es6.js"]);
+
+       const prevdir = process.cwd(); // eslint-disable-line no-shadow
+       try {
+         process.chdir("tmp");
+         yield setVersionedSources(["assigned.js", "es6.js"]);
+       }
+       finally {
+         process.chdir(prevdir);
+       }
+
+       yield execVersync("-b sync", true).catch((err) => {
+         assert.equal(cleanOutput(err.stdout), `\
+[OK] Version number in files to be synced is 0.0.7.
+[ERROR] Version in package.json (0.0.1) is lower than the version found in \
+other files (0.0.7)
+`);
+       });
+     }));
+
+  it("bump = \"sync\"", Promise.coroutine(function *test() {
+    const tmpfiles =
+          yield copyFixturesToTmp(["package.json", "assigned.js", "es6.js"]);
+
+    const prevdir = process.cwd(); // eslint-disable-line no-shadow
+    try {
+      process.chdir("tmp");
+      yield setVersionedSources(["assigned.js", "es6.js"]);
+      yield execAsync("npm version 0.2.0");
+    }
+    finally {
+      process.chdir(prevdir);
+    }
+
+    const result = yield execVersync("-b sync");
+    assertGood(result, `\
+[OK] Version number in files to be synced is 0.0.7.
+[OK] Version number was updated to 0.2.0 in assigned.js, es6.js.
 `);
     yield Promise.map(
       tmpfiles,

@@ -117,6 +117,7 @@ exports.getSources = function getSources(extraSources) {
 /**
  * @typedef {Object} VersionInfo
  * @property {string} version The version number.
+ * @property {string} source The file in which the version was found.
  * @property {Number} line The line number where the version was found.
  */
 
@@ -145,18 +146,21 @@ exports.getVersion = Promise.method((filename) => {
   }
 
   return fs.readFile(filename, DEFAULT_ENCODING).then((data) => {
+    let fetched;
     if (ext === "json" || ext === "js") {
       if (ext === "json") {
         data = `(${data})`;
       }
-      return patterns.parse(data);
+      fetched = patterns.parse(data);
+    }
+    else if (ext === "ts") {
+      fetched = tspatterns.parse(filename, data);
+    }
+    else {
+      throw new Error("should not get here!!");
     }
 
-    if (ext === "ts") {
-      return tspatterns.parse(filename, data);
-    }
-
-    throw new Error("should not get here!!");
+    return fetched && { ...fetched, source: filename };
   });
 });
 
@@ -186,6 +190,11 @@ exports.getValidVersion = function getValidVersion(filename) {
   });
 };
 
+/**
+ * @typedef {Object} VerifyResult
+ * @property {boolean} consistent Whether the version numbers are consistent.
+ * @property {Array.<VersionInfo>} versions An array of versions obtained.
+ */
 
 /**
  * Verify that the version numbers in a set of files are all equal to an
@@ -200,16 +209,27 @@ exports.getValidVersion = function getValidVersion(filename) {
  * @param {Array.<string>} filenames The files whose version number must be
  * verified.
  *
- * @param {string} expectedVersion The version we expect to find in the files.
- *
- * @returns {Promise<Array.<string> >} The files whose version numbers are not
- * the expected version. This promise will be rejected if any file does not
- * contain a version number or the version number is not a valid semver number.
+ * @returns {Promise<VerifyResult>}
  */
-exports.verify = function verify(filenames, expectedVersion) {
-  return Promise.filter(filenames,
-                        source => exports.getValidVersion(source)
-                        .then(current => current.version !== expectedVersion));
+exports.verify = function verify(filenames) {
+  return Promise.resolve()
+    .then(() => {
+      if (filenames.length === 0) {
+        throw Error("tried to call verify with an empty array");
+      }
+    })
+    .then(() => Promise.all(filenames.map(source =>
+                                          exports.getValidVersion(source))))
+    .then((versions) => {
+      const firstVersion = versions[0].version;
+      for (const { version } of versions.slice(1)) {
+        if (version !== firstVersion) {
+          return { consistent: false, versions };
+        }
+      }
+
+      return { consistent: true, versions };
+    });
 };
 
 
@@ -280,6 +300,20 @@ than the current one.`);
   return version;
 };
 
+/**
+ * A valid semver, or one of the values ``"major"``, ``"minor"``, ``"patch"``,
+ * or ``"sync"``.
+ * @typedef {string} BumpRequest.
+ *
+ * A bump request is used to specify how to bump a version number, which we
+ * shall name ``version`` here. If the requests is a valid semver higher than
+ * ``version`` then the value of the specification becomes the new version. If
+ * the request is one of ``"major"``, ``"minor"``, ``"patch"``, then ``version``
+ * is bumped by incrementing the relevant part. If the request is ``"sync"``,
+ * then ``version`` is changed to the value of the ``version`` field in
+ * ``package.json``.
+ */
+
 class Runner {
   /**
    * A ``Runner`` orchestrates the operations to be performed on a package. The
@@ -296,12 +330,8 @@ class Runner {
    * process. ``package.json`` is always processed. ``component.json`` and
    * ``bower.json`` are processed if they exist.
    *
-   * @param {boolean} [options.verify] Whether to verify the version
-   * number in the sources.
-   *
-   * @param {BumpSpecification} [options.bump] If set, bump the version
-   * number. The value specifies how to bump it. Setting this option will cause
-   * a verification to happen even if ``options.verify`` is not true.
+   * @param {BumpRequest} [options.bump] If set, bump the version
+   * number. The value specifies how to bump it.
    *
    * @param {boolean} [options.tag] If set, then after bumping the version
    * number, run ``git`` to commit the sources and create a tag that has for
@@ -316,7 +346,9 @@ class Runner {
     this._options = options || {};
     this._emitter = new EventEmitter();
     this._cachedSources = undefined;
+    this._cachedSourcesToModify = undefined;
     this._cachedCurrent = undefined;
+    this._sync = this._options.bump === "sync";
 
     let { onMessage } = this._options;
     if (onMessage) {
@@ -346,25 +378,26 @@ class Runner {
   /**
    * Verify the sources.
    *
-   * @returns {Promise} A promise that will be rejected if there is any error,
-   * or will be resolved if the verification is successful.
+   * @returns {Promise<string>} The current version in the files.
    */
   verify() {
-    return Promise.join(
-      this.getCurrent(),
-      this.getSources(),
-      (current, sources) => {
-        const { version } = current;
-        return exports.verify(sources, version).then((errSources) => {
-          if (errSources.length > 0) {
-            throw new Error(`Version number is out of sync in \
-${errSources.join(", ").red}.`);
+    return this.getSourcesToModify()
+      .then(sources => exports.verify(sources))
+      .then(({ consistent, versions }) => {
+        if (!consistent) {
+          let message = "Version numbers are inconsistent:\n";
+          for (const { source, version, line } of versions) {
+            message += `${source}:${line}: ${version.red}\n`;
           }
-          else {
-            this._emitMessage(`Everything is in sync, the version number is \
-${version.bold.green}.`);
-          }
-        });
+          throw new Error(message);
+        }
+
+        const currentVersion = versions[0].version;
+        this._emitMessage(
+          `${this._sync ? "Version number in files to be synced is" :
+                          "Everything is in sync, the version number is"}\
+ ${currentVersion.bold.green}.`);
+        return currentVersion;
       });
   }
 
@@ -386,6 +419,30 @@ ${version.bold.green}.`);
     const sources = this._cachedSources =
             exports.getSources(this._options.sources);
     return sources;
+  }
+
+  /**
+   * Get the sources known to this ``Runner`` instance, but only those that will
+   * need to be modified. If the runner was started with a ``bump`` option
+   * different from ``"sync"``, this method returns the same as {@link
+   * Runner#getSources getSources}. Otherwise, the returned list is the same
+   * except that it excludes ``package.json``, since it won't be modified.
+   *
+   * @returns {Promise<Array.<string> >} The sources. Duplicates are
+   * automatically removed.
+   */
+  getSourcesToModify() {
+    if (!this._cachedSourcesToModify) {
+      let sources = this.getSources();
+
+      if (this._sync) {
+        sources = sources.filter(x => x !== "package.json");
+      }
+
+      this._cachedSourcesToModify = sources;
+    }
+
+    return this._cachedSourcesToModify;
   }
 
   /**
@@ -412,7 +469,7 @@ ${version.bold.green}.`);
    * operation.
    */
   setVersion(version) {
-    return this.getSources().then(
+    return this.getSourcesToModify().then(
       sources => exports.setVersion(sources, version).then(() => {
         this._emitMessage(`Version number was updated to ${version.bold.green} \
 in ${sources.join(", ").bold}.`);
@@ -436,20 +493,37 @@ ${`v${version}`.bold.green} was created.`));
    * successful, or rejects if they are not.
    */
   run() {
-    const { bump, tag, verify } = this._options;
-    return Promise
-      .try(() => ((verify || bump) ? this.verify() : undefined))
-      .then(() => this.getCurrent())
-      .get("version")
-      .then((version) => {
+    const { bump, tag } = this._options;
+    return Promise.join(
+      this.verify(),
+      this.getCurrent().get("version"),
+      (common, current) => {
         if (!(bump || tag)) {
           return undefined;
         }
 
-        version = exports.bumpVersion(version, bump);
+        return this.getSourcesToModify().then((sources) => {
+          // This may happen if the user is doing a sync and there is no other
+          // file than package.json.
+          if (sources.length === 0) {
+            return undefined;
+          }
 
-        return this.setVersion(version).then(
-          () => (tag ? this._commitSourcesAndCreateTag(version) : undefined));
+          let version;
+          if (this._sync) {
+            if (semver.lt(current, common)) {
+              throw new Error(`Version in package.json (${current}) is \
+lower than the version found in other files (${common})`);
+            }
+            version = current;
+          }
+          else {
+            version = exports.bumpVersion(current, bump);
+          }
+
+          return this.setVersion(version).then(
+            () => (tag ? this._commitSourcesAndCreateTag(version) : undefined));
+        });
       });
   }
 }

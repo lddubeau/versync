@@ -81,6 +81,14 @@ versync -b -t
 [OK] Files have been commited and tag v1.2.4 was created.
 ````
 
+If you have a tool that already sets the version number in ``package.json`` and you only want to propagate that version number to other files, you can do:
+
+````
+versync -b sync
+[OK] Version number in files to be synced is 0.0.7.
+[OK] Version number was updated to 0.2.0 in assigned.js, es6.js.
+```
+
 ## How it works
 
 The module uses [UglifyJS 2](https://github.com/mishoo/UglifyJS2) to create an AST of the JavaScript and JSON sources passed in. This approach is more flexible than matching strings or trying to find version numbers in source files.
@@ -104,10 +112,12 @@ Optional arguments:
   -b [BUMP], --bump [BUMP]
                         Bump the version number in package.json, component.
                         json and all other specified source files. It can
-                        take one of the following values: major, minor,
-                        patch. Alternatively you can specify a custom
-                        version that is higher than the current one. If no
-                        value is specified, it defaults to patch.
+                        take one of the following values: "major", "minor",
+                        "patch". Or you can use "sync" to copy the version
+                        numbers from package.json to the other files.
+                        Alternatively you can specify a custom version that
+                        is higher than the current one. If no value is
+                        specified, it defaults to "patch".
   -s SOURCES, --sources SOURCES
                         Declare the JavaScript files in which the version
                         number will be updated. If not explicitly specified,
