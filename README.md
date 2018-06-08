@@ -1,62 +1,70 @@
 # versync
 
-`versync` is a node.js module that enables you to synchronize version numbers accross `package.json`, `component.json` and other source files of your choosing.
+`versync` is a node.js module that enables you to synchronize version numbers
+accross `package.json`, `component.json` and other source files of your
+choosing.
 
-This software is a fork of [`semver-sync`](https://github.com/cimi/semver-sync). The fork was triggered by a desire to support TypeScript. A pull request was put it but after over a week without response I decided to fork because my own projects depend on the enhancement. Many thanks to Alex Ciminian for having produced and leading the development of `semver-sync`.
+This software is a fork of
+[`semver-sync`](https://github.com/cimi/semver-sync). The fork was triggered by
+a desire to support TypeScript. A pull request was put it but after over a week
+without response I decided to fork because my own projects depend on the
+enhancement. Many thanks to Alex Ciminian for having produced and leading the
+development of `semver-sync`.
 
 ## Supported Platforms
 
-`versync` supports Node.js 4 and over.
-
-Use [`semver-sync`](https://github.com/cimi/semver-sync) if you need similar functionality on earlier versions of Node.
+`versync` supports Node.js 6 and over.
 
 ## Installation
 
 You can install it via `npm`:
 
-````
+```console
 npm install -g versync
-````
-
-Support for TypeScript is optional. If you want it, you need to also install `typescript`:
-
-````
-npm install -g typescript
-````
+```
 
 Note that it is perfectly viable to install `versync` locally if you want.
 
+Support for TypeScript is optional. If you want it, you need to also install
+`typescript`.
+
 ## How to use it
 
-This utility uses `package.json` as the reference by which all other version numbers in the package are checked. If you don't have a `package.json` in the folder where you run it, it will give an error and break.
+This utility uses `package.json` as the reference by which all other version
+numbers in the package are checked. If you don't have a `package.json` in the
+folder where you run it, it will give an error and break.
 
-The utility automatically checks `package.json` and `component.json`. If you have other JavaScript sources or JSON files that hold your version number first edit the `package.json`, adding the `versionedSources` property:
+The utility automatically checks `package.json` and `component.json`. If you
+have other JavaScript sources or JSON files that hold your version number first
+edit the `package.json`, adding the `versionedSources` property:
 
-````json
+```json
 {
   "name": "mypackage",
   "version": "1.2.3",
   "versionedSources": "mypackage.js"
 }
-````
+```
 
 Once that's done, you can check that everything's ok:
 
-````terminal
+```console
 versync -v
 [OK] Everything is in sync, with version number 1.2.3
-````
+```
 
-If you accidentally change the version number in one of the sources, or forget to update it, you'll see an error:
+If you accidentally change the version number in one of the sources, or forget
+to update it, you'll see an error:
 
-````
+```console
 versync -v
 [ERROR] Version number is out of sync in component.json, mypackage.js.
-````
+```
 
-If you want to update the version number automatically in all the files, you can do:
+If you want to update the version number automatically in all the files, you can
+do:
 
-````
+```console
 versync -b
 [OK] Version number was updated to 1.2.4 in package.json, component.json, mypackage.js.
 versync -b patch
@@ -71,19 +79,21 @@ versync -b 3.0.0-beta2
 [OK] Version number was updated to 3.0.1-beta2 in package.json, component.json, mypackage.js.
 versync -b 3.0.0-rc1
 [OK] Version number was updated to 3.0.1-rc1 in package.json, component.json, mypackage.js.
-````
+```
 
-If you want to update the version number automatically in all the files, commit the changes and create a new git tag, you can do:
+If you want to update the version number automatically in all the files, commit
+the changes and create a new git tag, you can do:
 
-````
+```console
 versync -b -t
 [OK] Version number was updated to 1.2.4 in package.json, component.json, mypackage.js.
 [OK] Files have been commited and tag v1.2.4 was created.
-````
+```
 
-If you have a tool that already sets the version number in ``package.json`` and you only want to propagate that version number to other files, you can do:
+If you have a tool that already sets the version number in ``package.json`` and
+you only want to propagate that version number to other files, you can do:
 
-````
+```console
 versync -b sync
 [OK] Version number in files to be synced is 0.0.7.
 [OK] Version number was updated to 0.2.0 in assigned.js, es6.js.
@@ -91,13 +101,15 @@ versync -b sync
 
 ## How it works
 
-The module uses [UglifyJS 2](https://github.com/mishoo/UglifyJS2) to create an AST of the JavaScript and JSON sources passed in. This approach is more flexible than matching strings or trying to find version numbers in source files.
+The module uses [esprima](https://github.com/jquery/esprima) to create an AST of
+the JavaScript and JSON sources passed in, or it uses TypeScript's own AST
+facilities to create an AST of TypeScript sources.
 
-The AST patterns used to find the nodes which hold the version properties are in the `patterns.js` source file. It should work on most types of structures, if you find one that doesn't please log an issue. The module has automated tests for this pattern matching, using some real-life libraries and it seems to work pretty well.
-
-To check and bump the version number, the module uses the [node-semver](https://github.com/isaacs/node-semver) package.
-
-The binary uses [node-optimist](https://github.com/substack/node-optimist) to parse the input options. Unfortunately, there are no automated tests for it yet, so please log any issues that you encounter.
+The AST patterns used to find the nodes which hold the version properties are in
+the `patterns.js` and `tspatterns.ts` source files. It should work on most types
+xof structures, if you find one that doesn't please log an issue. The module has
+automated tests for this pattern matching, using some real-life libraries and it
+seems to work pretty well.
 
 ## Console help
 
@@ -141,7 +153,7 @@ You can now import versync and use its exported API. The code in
 generate documentation from it, so you have to read the code to read
 the documentation of the API. In brief, you can now do:
 
-```
+```js
 const versync = require("versync");
 const runner = new sync.Runner({
   bump: "minor",
@@ -153,8 +165,10 @@ runner.run().then(() => {
 
 ## License
 
-This package is released under [the MIT License](http://opensource.org/licenses/MIT).
+This package is released under [the MIT
+License](http://opensource.org/licenses/MIT).
 
 ## Contributing
 
-We are targetting the flavor of JavaScript that Node v4 and later support natively. Strictly speaking, this is neither ES5 nor ES6. It is more than ES5 because arrow functions, ``const``, ``let``, template strings, etc. are allowed. It is less than ES6 because Node v4 does not support all of ES6.
+We are targetting the flavor of JavaScript that Node v6 and later support
+natively.
