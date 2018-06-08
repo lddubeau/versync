@@ -173,7 +173,7 @@ exports.getVersion = Promise.method((filename) => {
  * @param {string} filename The name of the file from which to extract a
  * version.
  *
- * @return {VersionInfo} The version information.
+ * @return {Promise<VersionInfo>} The version information.
  *
  * @throws {InvalidVersionError} If the version is not a valid semver version.
  */
