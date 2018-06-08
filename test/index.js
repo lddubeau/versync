@@ -211,9 +211,6 @@ describe("getSources", () => {
     makeTest("a single string", ["package.json", "literal.js"], "literal.js");
     makeTest("an array", ["package.json", "literal.js", "tsmodule.ts"],
              ["literal.js", "tsmodule.ts"]);
-    makeTest("a comma-separated list",
-             ["package.json", "literal.js", "tsmodule.ts"],
-             "literal.js,tsmodule.ts");
   });
 });
 

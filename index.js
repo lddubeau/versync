@@ -93,17 +93,16 @@ exports.getSources = function getSources(extraSources) {
             const pkg = JSON.parse(data);
             const { versionedSources } = pkg;
             if (versionedSources) {
-              if (versionedSources instanceof Array) {
-                sources = sources.concat(versionedSources);
+              if (!(versionedSources instanceof Array ||
+                    typeof versionedSources === "string")) {
+                throw new Error(
+                  "versionedSources must be an array or a string");
               }
-              else {
-                if (versionedSources.indexOf(",") !== -1) {
-                  console.warn( // eslint-disable-line no-console
-                    "WARNING: the use of comma in versionedSources is " +
-                      "deprecated.");
-                }
-                sources = sources.concat(versionedSources.split(","));
-              }
+
+              sources =
+                sources.concat(versionedSources instanceof Array ?
+                               versionedSources :
+                               [versionedSources]);
             }
 
             return sources;
