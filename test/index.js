@@ -703,8 +703,11 @@ describe("run", () => {
 });
 
 // "End-to-end" tests.
-describe("running versync", () => {
+describe("running versync", function runningVersync() {
+  // Later versions of TS require a longer timeout!
+  this.timeout(3000);
   const options = { cwd: tmpdir };
+
 
   after(() => del([tmpdir]));
 
