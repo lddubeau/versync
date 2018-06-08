@@ -41,6 +41,7 @@
     "@commitlint/config-angular": "^7.0.1",
     "chai": "^4.1.2",
     "chai-as-promised": "^7.1.1",
+    "conventional-changelog-cli": "^2.0.1",
     "del": "^3.0.0",
     "eslint": "^4.19.1",
     "eslint-config-lddubeau-base": "^2.0.1",
@@ -55,7 +56,8 @@
   "scripts": {
     "test": "npm run lint && mocha",
     "lint": "eslint *.js bin/versync test/*.js",
-    "commitmsg": "commitlint -e $GIT_PARAMS"
+    "commitmsg": "commitlint -e $GIT_PARAMS",
+    "version": "./bin/versync -b sync && conventional-changelog -p angular -i CHANGELOG.md -s && git add CHANGELOG.md"
   },
   "optionalDependencies": {
     "typescript": ">=1.8.10 <3"
