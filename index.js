@@ -159,7 +159,11 @@ exports.getVersion = Promise.method((filename) => {
       throw new Error("should not get here!!");
     }
 
-    return fetched && { ...fetched, source: filename };
+    return fetched && {
+      version: fetched.version,
+      line: fetched.line,
+      source: filename,
+    };
   });
 });
 
