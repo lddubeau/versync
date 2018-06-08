@@ -1,3 +1,70 @@
+<a name="4.0.0"></a>
+# [4.0.0](https://github.com/lddubeau/versync/compare/v3.1.1...v4.0.0) (2018-06-08)
+
+
+### Bug Fixes
+
+* convert argument parsing from optimist to argparse ([51fb56e](https://github.com/lddubeau/versync/commit/51fb56e))
+* drop object spreads ([f42627b](https://github.com/lddubeau/versync/commit/f42627b))
+* TS declarations and jsdoc documentation needed updating ([8f63e6f](https://github.com/lddubeau/versync/commit/8f63e6f))
+* update tests and error messages ([db4d656](https://github.com/lddubeau/versync/commit/db4d656))
+
+
+### Code Refactoring
+
+* drop support for versionedSources as comma-separated list ([da0490c](https://github.com/lddubeau/versync/commit/da0490c))
+* reduce -t / --tag to a flag ([606166a](https://github.com/lddubeau/versync/commit/606166a))
+
+
+### Documentation
+
+* add a missing breaking change ([ddb2dc1](https://github.com/lddubeau/versync/commit/ddb2dc1))
+
+
+### Features
+
+* add support for `-b sync` ([b8db171](https://github.com/lddubeau/versync/commit/b8db171))
+
+
+### BREAKING CHANGES
+
+* The API was changed to remove the ``verify`` flag from
+``RunnerOptions``. Previously you could use it to specify a run that would not
+verify anything by setting the flag to ``false``. It would have an effect only
+when not bumping and amounted to tell versync to do nothing at all, which is not
+terribly useful. Removing the flag simplifies the code. Now calling run
+will *always* result in versync performing at least a verification of the
+source.
+* setting ``versionedSources`` as a comma-separated list of file
+names is no longer supported. That was deprecated in version 3.0.0.
+* This change required changes to the API. If you only used ``Runner`` and called
+``run`` on it, there should be no change that affects you. If you used the other
+methods of ``Runner`` directly, or used the utility functions that are exported
+by versync, you may need to update your code. The changes are:
+
+  - ``VersionInfo`` now includes a ``source`` field which is the file that
+    contains the version number. This is not "breaking" but may be useful for you.
+
+  - The exported function ``verify``:
+
+    * It no longer takes an ``expectedVersion`` parameter. Instead of checking
+      that the files have an expected version, it checks that the files are
+      consistent.
+
+    * It used to return an array of strings with the names of the problematic
+      source files. Now it returns an object whose ``consistent`` field indicates
+      whether the version numbers are consistent. The ``versions`` field is an
+      array of ``VersionInfo`` elements.
+
+* the `-t` (`--tag`) option used do and be used exactly like the
+`-b` option but added a commit-and-tag to the operation. So `versync -b major`
+would bump the major version. And `versync -t major` would bump the major and
+commit-and-tag. The `-t` option is now a plain on/off flag. Where you used to do
+`versync -t major`, you now have to do `versync -b major -t` to turn on the
+commit-and-tag operation *in addition* to the version bump.
+
+====
+
 3.1.1:
 
  - Updated the ``typescript`` dependency to allow TypeScript 2.x.

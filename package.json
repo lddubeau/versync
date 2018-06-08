@@ -1,6 +1,6 @@
 {
   "name": "versync",
-  "version": "3.1.1",
+  "version": "4.0.0",
   "versionedSources": "index.js",
   "description": "Utility that keeps version numbers in sync between files.",
   "keywords": [
