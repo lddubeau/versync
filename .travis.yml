@@ -1,9 +1,5 @@
 language: node_js
 node_js:
+  - "10"
+  - "8"
   - "6"
-  - "5"
-  - "4"
-# We need npm newer than the 2 series due to the peer dependencies. This is
-# not a problem for users of the package but is a problem testing on Travis
-# with Node 4.
-before_install: "if [[ `npm -v` == 2* ]]; then npm install -g npm@latest; fi"
