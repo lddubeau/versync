@@ -54,7 +54,7 @@ with the current version.",
 
 const argv = parser.parseArgs();
 
-if (argv.tag && argv.bump) {
+if (argv.tag && !argv.bump) {
   console.log("The option -t is not valid without -b.");
   parser.printHelp();
   process.exit(1);

@@ -137,6 +137,14 @@ function copyFixturesToTmp(files) {
   });
 }
 
+function *gitInit() {
+  yield execAsync("git init");
+  yield execAsync("git config user.email 'you@example.com'");
+  yield execAsync("git config user.name YourName");
+  yield execAsync("git add .");
+  yield execAsync("git commit -m'Initial commit.'");
+}
+
 describe("setVersion sets version numbers in", () => {
   const setVersionTmp = Promise.coroutine(function *setVersionTmp(
     files, version) {
@@ -294,12 +302,7 @@ describe("commiting files and creating tag", () => {
       try {
         process.chdir("tmp");
 
-        yield execAsync("git init");
-        yield execAsync("git config user.email 'you@example.com'");
-        yield execAsync("git config user.name YourName");
-        yield execAsync("git add .");
-        yield execAsync("git commit -m'Initial commit.'");
-
+        yield* gitInit();
         yield fs.writeFile("test.txt", "");
 
         yield sync.setVersion(fixtures, "0.0.2");
@@ -711,7 +714,8 @@ describe("running versync", function runningVersync() {
 
   after(() => del([tmpdir]));
 
-  beforeEach(() => del([tmpdir]).then(() => fs.ensureDir(tmpdir)));
+  beforeEach(() => del([tmpdir])
+             .then(() => fs.ensureDir(tmpdir)));
 
   function execVersync(args, silent) {
     options.silentFailure = silent;
@@ -799,6 +803,44 @@ other files (0.0.7)
       assert.equal(cleanOutput(err.stdout),
                    "[ERROR] Invalid semver number in invalid.js. " +
                    "Found: version\n");
+    });
+  }));
+
+  it("tag", Promise.coroutine(function *test() {
+    yield copyFixturesToTmp(["package.json", "component.json"]);
+
+    const prevdir = process.cwd(); // eslint-disable-line no-shadow
+    try {
+      process.chdir("tmp");
+      yield* gitInit();
+    }
+    finally {
+      process.chdir(prevdir);
+    }
+
+    const result = yield execVersync("-b 0.2.0 -t");
+    assertGood(result, `\
+[OK] Everything is in sync, the version number is 0.0.1.
+[OK] Version number was updated to 0.2.0 in package.json, component.json.
+[OK] Files have been committed and tag v0.2.0 was created.
+`);
+  }));
+
+  it("-t fails if -b is not used", Promise.coroutine(function *test() {
+    yield copyFixturesToTmp(["package.json", "component.json"]);
+
+    const prevdir = process.cwd(); // eslint-disable-line no-shadow
+    try {
+      process.chdir("tmp");
+      yield* gitInit();
+    }
+    finally {
+      process.chdir(prevdir);
+    }
+
+    yield execVersync("-t", true).catch((err) => {
+      assert.match(cleanOutput(err.stdout),
+                   /^The option -t is not valid without -b/);
     });
   }));
 });
