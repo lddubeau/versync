@@ -137,12 +137,13 @@ function copyFixturesToTmp(files) {
   });
 }
 
-function *gitInit() {
-  yield execAsync("git init");
-  yield execAsync("git config user.email 'you@example.com'");
-  yield execAsync("git config user.name YourName");
-  yield execAsync("git add .");
-  yield execAsync("git commit -m'Initial commit.'");
+function *gitInit(options) {
+  options = options || {};
+  yield execAsync("git init", options);
+  yield execAsync("git config user.email 'you@example.com'", options);
+  yield execAsync("git config user.name YourName", options);
+  yield execAsync("git add .", options);
+  yield execAsync("git commit -m'Initial commit.'", options);
 }
 
 describe("setVersion sets version numbers in", () => {
@@ -809,14 +810,7 @@ other files (0.0.7)
   it("tag", Promise.coroutine(function *test() {
     yield copyFixturesToTmp(["package.json", "component.json"]);
 
-    const prevdir = process.cwd(); // eslint-disable-line no-shadow
-    try {
-      process.chdir("tmp");
-      yield* gitInit();
-    }
-    finally {
-      process.chdir(prevdir);
-    }
+    yield* gitInit({ cwd: "tmp" });
 
     const result = yield execVersync("-b 0.2.0 -t");
     assertGood(result, `\
@@ -829,18 +823,40 @@ other files (0.0.7)
   it("-t fails if -b is not used", Promise.coroutine(function *test() {
     yield copyFixturesToTmp(["package.json", "component.json"]);
 
-    const prevdir = process.cwd(); // eslint-disable-line no-shadow
-    try {
-      process.chdir("tmp");
-      yield* gitInit();
-    }
-    finally {
-      process.chdir(prevdir);
-    }
+    yield* gitInit({ cwd: "tmp" });
 
     yield execVersync("-t", true).catch((err) => {
       assert.match(cleanOutput(err.stdout),
                    /^The option -t is not valid without -b/);
+    });
+  }));
+
+  it("add", Promise.coroutine(function *test() {
+    yield copyFixturesToTmp(["package.json", "component.json"]);
+
+    yield* gitInit({ cwd: "tmp" });
+
+    const result = yield execVersync("-b 0.2.0 -a");
+    assertGood(result, `\
+[OK] Everything is in sync, the version number is 0.0.1.
+[OK] Version number was updated to 0.2.0 in package.json, component.json.
+`);
+
+    const { stdout } = yield execAsync("git status -s", { cwd: "tmp" });
+    assert.equal(stdout, `\
+M  component.json
+M  package.json
+`);
+  }));
+
+  it("-a fails if -b is not used", Promise.coroutine(function *test() {
+    yield copyFixturesToTmp(["package.json", "component.json"]);
+
+    yield* gitInit({ cwd: "tmp" });
+
+    yield execVersync("-a", true).catch((err) => {
+      assert.match(cleanOutput(err.stdout),
+                   /^The option -a is not valid without -b/);
     });
   }));
 });

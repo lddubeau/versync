@@ -336,10 +336,15 @@ class Runner {
    * @param {BumpRequest} [options.bump] If set, bump the version
    * number. The value specifies how to bump it.
    *
+   * @param {boolean} [options.add] If set, run ``git add`` on the modified
+   * files.
+   *
    * @param {boolean} [options.tag] If set, then after bumping the version
    * number, run ``git`` to commit the sources and create a tag that has for
    * name the new version number, preceded by ``v``. Setting this option
-   * requires that ``options.bump`` be set to a valid value.
+   * requires that ``options.bump`` be set to a valid value. (Note that this
+   * option implies the option ``add``. If this option is set, then setting
+   * ``add`` does nothing.)
    *
    * @param {Function|Array.<Function>} [options.onMessage] One or more
    * functions to be immediately passed to the ``onMessage`` method.
@@ -479,9 +484,13 @@ in ${sources.join(", ").bold}.`);
       }));
   }
 
-  _commitSourcesAndCreateTag(version) {
+  _addSources() {
     return this.getSources().then(
-      sources => Promise.each(sources, file => execAsync(`git add ${file}`)))
+      sources => Promise.each(sources, file => execAsync(`git add ${file}`)));
+  }
+
+  _commitSourcesAndCreateTag(version) {
+    return this._addSources()
       .then(() => execAsync(`git commit -m 'v${version}'`))
       .then(() => execAsync(`git tag v${version}`))
       .then(() => this._emitMessage(`Files have been committed and tag \
@@ -496,12 +505,12 @@ ${`v${version}`.bold.green} was created.`));
    * successful, or rejects if they are not.
    */
   run() {
-    const { bump, tag } = this._options;
+    const { bump, tag, add } = this._options;
     return Promise.join(
       this.verify(),
       this.getCurrent().get("version"),
       (common, current) => {
-        if (!(bump || tag)) {
+        if (!(bump || tag || add)) {
           return undefined;
         }
 
@@ -524,8 +533,18 @@ lower than the version found in other files (${common})`);
             version = exports.bumpVersion(current, bump);
           }
 
-          return this.setVersion(version).then(
-            () => (tag ? this._commitSourcesAndCreateTag(version) : undefined));
+          return this.setVersion(version)
+            .then(() => {
+              if (tag) {
+                return this._commitSourcesAndCreateTag(version);
+              }
+
+              if (add) {
+                return this._addSources();
+              }
+
+              return undefined;
+            });
         });
       });
   }
