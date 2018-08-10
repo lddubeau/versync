@@ -48,7 +48,7 @@
     "husky": "^0.14.3",
     "mocha": "^5.2.0",
     "mockery": "^2.1.0",
-    "typescript": ">=1.8.10 <3"
+    "typescript": ">=1.8.10 <4"
   },
   "bin": {
     "versync": "./bin/versync"
@@ -61,6 +61,6 @@
     "version": "./bin/versync -b sync -a && conventional-changelog -p angular -i CHANGELOG.md -s && git add CHANGELOG.md"
   },
   "optionalDependencies": {
-    "typescript": ">=1.8.10 <3"
+    "typescript": ">=1.8.10 <4"
   }
 }
