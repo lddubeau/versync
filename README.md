@@ -90,14 +90,41 @@ versync -b -t
 [OK] Files have been commited and tag v1.2.4 was created.
 ```
 
-If you have a tool that already sets the version number in ``package.json`` and
-you only want to propagate that version number to other files, you can do:
+### Integration with `npm version`
+
+If you want to integrate versync with `npm version` or any tool that sets the
+version number in ``package.json`` and you only want to propagate that version
+number to other files, you can use `-b sync`:
 
 ```console
 versync -b sync
 [OK] Version number in files to be synced is 0.0.7.
 [OK] Version number was updated to 0.2.0 in assigned.js, es6.js.
 ```
+
+If the tool also commits files, you probably want to also use the `-a` flag:
+
+```console
+versync -b sync -a
+```
+
+This allows you to have a `version` script like this in your `package.json`:
+
+```json
+  "version": "./bin/versync -b sync -a",
+```
+
+What will happen when you run `npm version` is:
+
+1. `npm` will change the version in `package.json`, and then launch the
+`version` script.
+
+2. `versync` will synchronise all version numbers with the new one in
+`package.json`.
+
+3. `versync` will run `git add` for all synchronised files.
+
+4. `npm` will run `git add package.json`, commit the changes and add a tag.
 
 ## How it works
 
