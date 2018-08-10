@@ -29,7 +29,7 @@ const DEFAULT_ENCODING = "utf-8";
 
 exports.name = "versync";
 
-exports.version = "4.0.0";
+exports.version = "4.1.0";
 
 class InvalidVersionError extends Error {
   constructor(message) {

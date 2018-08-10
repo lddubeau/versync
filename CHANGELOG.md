@@ -1,3 +1,20 @@
+<a name="4.1.0"></a>
+# [4.1.0](https://github.com/lddubeau/versync/compare/v4.0.0...v4.1.0) (2018-08-10)
+
+
+### Bug Fixes
+
+* correctly check whether the `tag` flag is used without `bump` ([cead876](https://github.com/lddubeau/versync/commit/cead876))
+
+
+### Features
+
+* add support for running `git add` by itself ([775358b](https://github.com/lddubeau/versync/commit/775358b))
+
+### Deprecations
+
+* The special treatment of `bower.json` and `component.json` is formally deprecated. See [this issue](https://github.com/lddubeau/versync/issues/5).
+
 <a name="4.0.0"></a>
 # [4.0.0](https://github.com/lddubeau/versync/compare/v3.1.1...v4.0.0) (2018-06-08)
 
