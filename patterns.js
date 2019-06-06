@@ -110,8 +110,8 @@ patterns.push((source, node) => {
 // useful for JSON
 patterns.push(
   (source, node) => (isObjectLiteral(node) ?
-                     extractVersionProperty(node.properties)
-                     : undefined));
+                     extractVersionProperty(node.properties) :
+                     undefined));
 
 patterns.match = function match(source, node) {
   let result;
@@ -142,7 +142,8 @@ function traverse(source, node) {
 
     return result;
   }
-  else if (node.arguments && node.arguments.length) {
+
+  if (node.arguments && node.arguments.length) {
     node.arguments.find((n) => {
       result = traverse(source, n);
       return result;
@@ -150,16 +151,20 @@ function traverse(source, node) {
 
     return result;
   }
-  else if (node.body) {
+
+  if (node.body) {
     return traverse(source, node.body);
   }
-  else if (node.expression) {
+
+  if (node.expression) {
     return traverse(source, node.expression);
   }
-  else if (node.right) {
+
+  if (node.right) {
     return traverse(source, node.right);
   }
-  else if (node.callee) {
+
+  if (node.callee) {
     return traverse(source, node.callee);
   }
 

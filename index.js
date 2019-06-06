@@ -6,9 +6,9 @@ const { exec } = require("child_process");
 const Promise = require("bluebird");
 const fs = require("fs-extra");
 const path = require("path");
-const patterns = require("./patterns");
 const semver = require("semver");
 const { EventEmitter } = require("events");
+const patterns = require("./patterns");
 require("colors");
 
 // We separate require("typescript") and require("./tspatterns") so that errors
@@ -88,25 +88,24 @@ exports.getSources = function getSources(extraSources) {
     .then(sources => ["package.json"].concat(sources))
     .then(sources => ((extraSources && extraSources.length) ?
           sources.concat(extraSources) : sources))
-    .then(sources =>
-          fs.readFile("package.json", "utf-8").then((data) => {
-            const pkg = JSON.parse(data);
-            const { versionedSources } = pkg;
-            if (versionedSources) {
-              if (!(versionedSources instanceof Array ||
-                    typeof versionedSources === "string")) {
-                throw new Error(
-                  "versionedSources must be an array or a string");
-              }
+    .then(sources => fs.readFile("package.json", "utf-8").then((data) => {
+      const pkg = JSON.parse(data);
+      const { versionedSources } = pkg;
+      if (versionedSources) {
+        if (!(versionedSources instanceof Array ||
+              typeof versionedSources === "string")) {
+          throw new Error(
+            "versionedSources must be an array or a string");
+        }
 
-              sources =
-                sources.concat(versionedSources instanceof Array ?
-                               versionedSources :
-                               [versionedSources]);
-            }
+        sources =
+          sources.concat(versionedSources instanceof Array ?
+                         versionedSources :
+                         [versionedSources]);
+      }
 
-            return sources;
-          }))
+      return sources;
+    }))
   // We filter out any duplicates from the srcs array to prevent confusion
   // in the output.
     .then(sources => sources.filter(
@@ -221,8 +220,8 @@ exports.verify = function verify(filenames) {
         throw Error("tried to call verify with an empty array");
       }
     })
-    .then(() => Promise.all(filenames.map(source =>
-                                          exports.getValidVersion(source))))
+    .then(() => Promise.all(filenames
+                            .map(source => exports.getValidVersion(source))))
     .then((versions) => {
       const firstVersion = versions[0].version;
       for (const { version } of versions.slice(1)) {
@@ -247,18 +246,23 @@ exports.verify = function verify(filenames) {
  * @returns {Promise} A promise that resolves once the operation is completed.
  */
 exports.setVersion = function setVersion(filenames, version) {
-  return Promise.all(Promise.map(filenames, filename =>
-    exports.getVersion(filename).then(
-      current => fs.readFile(filename, DEFAULT_ENCODING).then((data) => {
-        if (!current) {
-          throw new Error(`Missing version number in ${filename}.`);
-        }
-        const lines = data.split(DEFAULT_SEPARATOR);
-        const ix = current.line - 1;
-        lines[ix] = lines[ix].replace(current.version, version);
-        return fs.writeFile(filename, lines.join(DEFAULT_SEPARATOR),
-                            DEFAULT_ENCODING);
-      }))));
+  return Promise
+    .all(Promise.map(filenames,
+                     filename => exports.getVersion(filename).then(
+                       current => fs.readFile(filename, DEFAULT_ENCODING)
+                         .then((data) => {
+                           if (!current) {
+                             throw new Error(`Missing version number in \
+${filename}.`);
+                           }
+                           const lines = data.split(DEFAULT_SEPARATOR);
+                           const ix = current.line - 1;
+                           lines[ix] = lines[ix].replace(current.version,
+                                                         version);
+                           return fs.writeFile(filename,
+                                               lines.join(DEFAULT_SEPARATOR),
+                                               DEFAULT_ENCODING);
+                         }))));
 };
 
 /**

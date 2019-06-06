@@ -4,7 +4,6 @@
 "use strict";
 
 const { exec } = require("child_process");
-const sync = require("../");
 const del = require("del");
 const fs = require("fs-extra");
 const path = require("path");
@@ -12,6 +11,7 @@ const mockery = require("mockery");
 const Promise = require("bluebird");
 const chai = require("chai");
 const chaiAsPromised = require("chai-as-promised");
+const sync = require("../");
 
 chai.use(chaiAsPromised);
 const { assert } = chai;
@@ -225,11 +225,12 @@ describe("getSources", () => {
 
 describe("verify", () => {
   function makeTest(name, fixtures, expected) {
-    it(name, () =>
-       (expected ?
-        assert.eventually.deepEqual(sync.verify(fixtures.map(toFixture)),
-                                    expected) :
-        assert.eventually.isFalse(sync.verify(fixtures.map(toFixture)))));
+    it(name, () => (expected ?
+                    assert.eventually
+                    .deepEqual(sync.verify(fixtures.map(toFixture)),
+                               expected) :
+                    assert.eventually
+                    .isFalse(sync.verify(fixtures.map(toFixture)))));
   }
 
   it("empty array", () => {
@@ -267,26 +268,26 @@ describe("verify", () => {
 });
 
 describe("bumpVersion", () => {
-  it("takes a version number", () =>
-     assert.equal(sync.bumpVersion("0.0.1", "1.0.0"), "1.0.0"));
-  it("takes 'major'", () =>
-     assert.equal(sync.bumpVersion("0.0.1", "major"), "1.0.0"));
-  it("takes 'minor'", () =>
-     assert.equal(sync.bumpVersion("0.0.1", "minor"), "0.1.0"));
-  it("takes 'patch'", () =>
-     assert.equal(sync.bumpVersion("0.0.1", "patch"), "0.0.2"));
-  it("raises an error on garbage", () =>
-     assert.throws(sync.bumpVersion.bind(null, "0.0.1", "garbage"),
-                   Error,
-                   /^Invalid bump specification.*/));
-  it("raises an error if the new version is not greater", () =>
-     assert.throws(sync.bumpVersion.bind(null, "0.0.1", "0.0.1"),
-                   Error,
-                   /^Invalid bump specification.*/));
-  it("raises an error if the old version is garbage", () =>
-     assert.throws(sync.bumpVersion.bind(null, "gerbage", "0.0.1"),
-                   Error,
-                   "The version number is not a valid semver number."));
+  it("takes a version number",
+     () => assert.equal(sync.bumpVersion("0.0.1", "1.0.0"), "1.0.0"));
+  it("takes 'major'",
+     () => assert.equal(sync.bumpVersion("0.0.1", "major"), "1.0.0"));
+  it("takes 'minor'",
+     () => assert.equal(sync.bumpVersion("0.0.1", "minor"), "0.1.0"));
+  it("takes 'patch'",
+     () => assert.equal(sync.bumpVersion("0.0.1", "patch"), "0.0.2"));
+  it("raises an error on garbage",
+     () => assert.throws(sync.bumpVersion.bind(null, "0.0.1", "garbage"),
+                         Error,
+                         /^Invalid bump specification.*/));
+  it("raises an error if the new version is not greater",
+     () => assert.throws(sync.bumpVersion.bind(null, "0.0.1", "0.0.1"),
+                         Error,
+                         /^Invalid bump specification.*/));
+  it("raises an error if the old version is garbage",
+     () => assert.throws(sync.bumpVersion.bind(null, "gerbage", "0.0.1"),
+                         Error,
+                         "The version number is not a valid semver number."));
 });
 
 describe("commiting files and creating tag", () => {
@@ -565,9 +566,9 @@ amd.js:2: ${"0.9.0".red}
                runner.setVersion("9.9.9");
              }));
     makeTest("actually changes the version number", ["package.json"],
-             runner => runner.setVersion("9.9.9").then(() =>
-               assert.eventually.equal(
-                 sync.getVersion("package.json").get("version"), "9.9.9")));
+             runner => runner.setVersion("9.9.9")
+             .then(() => assert.eventually.equal(
+               sync.getVersion("package.json").get("version"), "9.9.9")));
     makeTest("rejects when there is an error", ["package.json", "noversion.js"],
              runner => assert.isRejected(
                runner.setVersion("9.9.9"), Error,
@@ -694,10 +695,10 @@ describe("run", () => {
     }));
   }
 
-  makeTest("fulfills when there is no error", ["package.json"], () =>
-    assert.isFulfilled(sync.run({
-      bump: "minor",
-    })));
+  makeTest("fulfills when there is no error", ["package.json"],
+           () => assert.isFulfilled(sync.run({
+             bump: "minor",
+           })));
 
   makeTest("rejects when there is an error", ["package.json", "noversion.js"],
            () => assert.isRejected(sync.run({

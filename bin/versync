@@ -4,9 +4,9 @@
 
 "use strict";
 
-const sync = require("../");
 const fs = require("fs");
 const { ArgumentParser } = require("argparse");
+const sync = require("../");
 require("colors");
 
 /* eslint-disable no-console */
