@@ -1,8 +1,7 @@
 # versync
 
 `versync` is a node.js module that enables you to synchronize version numbers
-accross `package.json`, `component.json` and other source files of your
-choosing.
+accross `package.json` and other source files of your choosing.
 
 This software is a fork of
 [`semver-sync`](https://github.com/cimi/semver-sync). The fork was triggered by
@@ -34,9 +33,9 @@ This utility uses `package.json` as the reference by which all other version
 numbers in the package are checked. If you don't have a `package.json` in the
 folder where you run it, it will give an error and break.
 
-The utility automatically checks `package.json` and `component.json`. If you
-have other JavaScript sources or JSON files that hold your version number first
-edit the `package.json`, adding the `versionedSources` property:
+The utility automatically checks `package.json`. If you have other JavaScript
+sources or JSON files that hold your version number first edit the
+`package.json`, adding the `versionedSources` property:
 
 ```json
 {
@@ -141,36 +140,37 @@ seems to work pretty well.
 ## Console help
 
 ```
-usage: versync [-h] [-b [BUMP]] [-s SOURCES] [-v] [-t]
+usage: versync [-h] [-b [BUMP]] [-s SOURCES] [-v] [-a] [-t]
 
-Synchronizes version numbers accross package.json, component.json and other
-source files of your choosing.
+Synchronizes version numbers accross package.json and other source files of
+your choosing.
 
 Optional arguments:
   -h, --help            Show this help message and exit.
   -b [BUMP], --bump [BUMP]
-                        Bump the version number in package.json, component.
-                        json and all other specified source files. It can
-                        take one of the following values: "major", "minor",
-                        "patch". Or you can use "sync" to copy the version
-                        numbers from package.json to the other files.
+                        Bump the version number in the specified source files.
+                         It can take one of the following values: "major",
+                        "minor", "patch". Or you can use "sync" to copy the
+                        version numbers from package.json to the other files.
                         Alternatively you can specify a custom version that
                         is higher than the current one. If no value is
                         specified, it defaults to "patch".
   -s SOURCES, --sources SOURCES
                         Declare the JavaScript files in which the version
-                        number will be updated. If not explicitly specified,
-                        it is read from the package.json "versionedSources"
-                        property. If it's not present in the package.json and
-                        not explicitly specified, only component.json and
-                        package.json will be synced. Optional.
-  -v, --verify          Verifies that package.json, component.json and all
-                        other source files have the same version number and
-                        checks if it conforms to the semver specification.
+                        number will be updated. If this option is not used,
+                        the list of files is read from the package.json
+                        "versionedSources" property. If the property is not
+                        present in the package.json and this option is not
+                        used, only package.json will be synced. Optional.
+  -v, --verify          Verifies that the sources have the same version
+                        number and checks whether this version number
+                        conforms to the semver specification.
+  -a, --add             After bumping the version number, run `git add` on
+                        the versioned files.
   -t, --tag             After bumping the version number, commit the changes
-                        to package.json, component.json and all other
-                        specified source files and create a git tag with the
-                        current version.
+                        and create a git tag with the current version. (Note
+                        that using --add with this flag does nothing more
+                        than using this flag alone.)
 ```
 
 ## API

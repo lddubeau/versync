@@ -72,8 +72,8 @@ function execAsync(command, options) {
 
 /**
  * Get a list of sources to process. This list includes by default
- * ``package.json``, ``component.json`` and ``bower.json``. It also includes the
- * files specified by the ``versionedSources`` key in ``package.json``.
+ * ``package.json``. It also includes the files specified by the
+ * ``versionedSources`` key in ``package.json``.
  *
  * @param {Array.<string>} extraSources An array of additional sources to
  * include.
@@ -82,10 +82,7 @@ function execAsync(command, options) {
  * removed.
  */
 exports.getSources = function getSources(extraSources) {
-  // We support both bower variants and do not add these unless they exist.
-  return Promise.filter(["component.json", "bower.json"],
-                        source => fs.stat(source).catch(() => false))
-    .then(sources => ["package.json"].concat(sources))
+  return Promise.resolve(["package.json"])
     .then(sources => ((extraSources && extraSources.length) ?
           sources.concat(extraSources) : sources))
     .then(sources => fs.readFile("package.json", "utf-8").then((data) => {
@@ -334,8 +331,7 @@ class Runner {
    * @param {Object} options The new ``Runner``'s options.
    *
    * @param {Array.<string>} [options.sources] Additional sources to
-   * process. ``package.json`` is always processed. ``component.json`` and
-   * ``bower.json`` are processed if they exist.
+   * process. ``package.json`` is always processed.
    *
    * @param {BumpRequest} [options.bump] If set, bump the version
    * number. The value specifies how to bump it.
@@ -415,10 +411,9 @@ class Runner {
 
   /**
    * Get the sources known to this ``Runner`` instance.  These include by
-   * default ``package.json``, ``component.json`` and ``bower.json``. It also
-   * includes the files specified by the ``versionedSources`` key in
-   * ``package.json``, and anything passed in ``options.sources`` when this
-   * instance was created.
+   * default ``package.json``. It also includes the files specified by the
+   * ``versionedSources`` key in ``package.json``, and anything passed in
+   * ``options.sources`` when this instance was created.
    *
    * @returns {Promise<Array.<string> >} The sources. Duplicates are
    * automatically removed.

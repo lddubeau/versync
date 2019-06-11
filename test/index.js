@@ -168,7 +168,7 @@ describe("setVersion sets version numbers in", () => {
     }));
   }
 
-  test("json files", ["component.json", "package.json"], "0.0.5");
+  test("json files", ["package.json"], "0.0.5");
   test("topojson.js", ["complete/topojson.js"], "0.0.11");
   test("TypeScript module", ["tsmodule.ts"], "0.1.0");
   test("an es6 file", ["es6-export.js"], "0.1.0");
@@ -183,6 +183,17 @@ function setVersionedSources(value) {
     }
     fixture.versionedSources = value;
     return fs.writeFile("package.json", JSON.stringify(fixture));
+  });
+}
+
+function setVersionedSourcesInTmp(value) {
+  return Promise.resolve().then(() => {
+    // eslint-disable-next-line no-shadow
+    const prevdir = process.cwd();
+    process.chdir("tmp");
+    return setVersionedSources(value).then(() => {
+      process.chdir(prevdir);
+    });
   });
 }
 
@@ -212,10 +223,6 @@ describe("getSources", () => {
   }
 
   makeTest("package.json without optional files", ["package.json"]);
-  makeTest("package.json and component.json", ["package.json",
-                                               "component.json"]);
-  makeTest("package.json and bower.json", ["package.json", "bower.json"]);
-
   describe("reads versionedSources as", () => {
     makeTest("a single string", ["package.json", "literal.js"], "literal.js");
     makeTest("an array", ["package.json", "literal.js", "tsmodule.ts"],
@@ -307,6 +314,7 @@ describe("commiting files and creating tag", () => {
         yield* gitInit();
         yield fs.writeFile("test.txt", "");
 
+        yield setVersionedSources(["component.json"]);
         yield sync.setVersion(fixtures, "0.0.2");
 
         yield fn(fixtures);
@@ -383,9 +391,6 @@ describe("Runner", () => {
 
 
     makeTest("includes package.json by default", ["package.json"]);
-    makeTest("includes component.json if present", ["package.json",
-                                                    "component.json"]);
-    makeTest("includes bower.json if present", ["package.json", "bower.json"]);
     makeTest("includes files in versionedSources",
              ["package.json", "tsmodule.ts"], ["tsmodule.ts"]);
     makeTest("includes files in options",
@@ -430,9 +435,6 @@ describe("Runner", () => {
     }
 
     makeTest("includes package.json by default", ["package.json"]);
-    makeTest("includes component.json if present", ["package.json",
-                                                    "component.json"]);
-    makeTest("includes bower.json if present", ["package.json", "bower.json"]);
     makeTest("includes files in versionedSources",
              ["package.json", "tsmodule.ts"], ["tsmodule.ts"]);
     makeTest("includes files in options",
@@ -731,6 +733,7 @@ describe("running versync", function runningVersync() {
 
   it("verify", Promise.coroutine(function *test() {
     yield copyFixturesToTmp(["package.json", "component.json"]);
+    yield setVersionedSourcesInTmp(["component.json"]);
 
     const result = yield execVersync("-v");
     assertGood(result,
@@ -739,6 +742,7 @@ describe("running versync", function runningVersync() {
 
   it("bump", Promise.coroutine(function *test() {
     const tmpfiles = yield copyFixturesToTmp(["package.json", "component.json"]);
+    yield setVersionedSourcesInTmp(["component.json"]);
 
     const result = yield execVersync("-b 0.2.0");
     assertGood(result, `\
@@ -755,15 +759,7 @@ describe("running versync", function runningVersync() {
      Promise.coroutine(function *test() {
        yield copyFixturesToTmp(["package.json", "assigned.js", "es6.js"]);
 
-       const prevdir = process.cwd(); // eslint-disable-line no-shadow
-       try {
-         process.chdir("tmp");
-         yield setVersionedSources(["assigned.js", "es6.js"]);
-       }
-       finally {
-         process.chdir(prevdir);
-       }
-
+       yield setVersionedSourcesInTmp(["assigned.js", "es6.js"]);
        yield execVersync("-b sync", true).catch((err) => {
          assert.equal(cleanOutput(err.stdout), `\
 [OK] Version number in files to be synced is 0.0.7.
@@ -810,6 +806,7 @@ other files (0.0.7)
 
   it("tag", Promise.coroutine(function *test() {
     yield copyFixturesToTmp(["package.json", "component.json"]);
+    yield setVersionedSourcesInTmp(["component.json"]);
 
     yield* gitInit({ cwd: "tmp" });
 
@@ -823,6 +820,7 @@ other files (0.0.7)
 
   it("-t fails if -b is not used", Promise.coroutine(function *test() {
     yield copyFixturesToTmp(["package.json", "component.json"]);
+    yield setVersionedSourcesInTmp(["component.json"]);
 
     yield* gitInit({ cwd: "tmp" });
 
@@ -834,6 +832,7 @@ other files (0.0.7)
 
   it("add", Promise.coroutine(function *test() {
     yield copyFixturesToTmp(["package.json", "component.json"]);
+    yield setVersionedSourcesInTmp(["component.json"]);
 
     yield* gitInit({ cwd: "tmp" });
 
@@ -852,6 +851,7 @@ M  package.json
 
   it("-a fails if -b is not used", Promise.coroutine(function *test() {
     yield copyFixturesToTmp(["package.json", "component.json"]);
+    yield setVersionedSourcesInTmp(["component.json"]);
 
     yield* gitInit({ cwd: "tmp" });
 
