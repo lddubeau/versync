@@ -45,7 +45,7 @@
     "del": "^4.1.1",
     "eslint": "^5.16.0",
     "eslint-config-lddubeau-base": "^3.0.3",
-    "husky": "^2.4.0",
+    "husky": "^2.4.1",
     "mocha": "^6.1.4",
     "mockery": "^2.1.0",
     "typescript": ">=1.8.10 <4"
