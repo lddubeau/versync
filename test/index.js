@@ -9,10 +9,9 @@ const fs = require("fs-extra");
 const path = require("path");
 const mockery = require("mockery");
 const chai = require("chai");
-const chaiAsPromised = require("chai-as-promised");
+const { expectRejection } = require("expect-rejection");
 const sync = require("../");
 
-chai.use(chaiAsPromised);
 const { assert } = chai;
 
 function execAsync(command, options) {
@@ -58,8 +57,8 @@ after(() => process.chdir(prevdir));
 describe("getVersion", () => {
   describe("reads version numbers from ", () => {
     function test(name, filename, version) {
-      it(name, () => assert.eventually.equal(
-        sync.getVersion(toFixture(filename)).then(v => v.version), version));
+      it(name, async () => assert.equal(
+        (await sync.getVersion(toFixture(filename))).version, version));
     }
 
     test("json", "package.json", "0.0.1");
@@ -84,8 +83,8 @@ describe("getVersion", () => {
 
   describe("returns line number information from", () => {
     function test(name, filename, line) {
-      it(name, () => assert.eventually.equal(
-        sync.getVersion(toFixture(filename)).then(v => v.line), line));
+      it(name, async () => assert.equal(
+        (await sync.getVersion(toFixture(filename))).line, line));
     }
 
     test("json", "package.json", 4);
@@ -105,7 +104,7 @@ describe("getVersion", () => {
 
       const nots = require(".."); // eslint-disable-line global-require
 
-      await assert.isRejected(
+      await expectRejection(
         nots.getVersion("fixtures/tsmodule.ts"),
         Error, "file fixtures/tsmodule.ts is a TypeScript file " +
           "but the package `typescript` is not available; " +
@@ -119,12 +118,12 @@ describe("getVersion", () => {
 
 describe("getValidVersion", () => {
   it("resolves to a version number when the version is valid",
-     () => assert.eventually.equal(
-       sync.getValidVersion(toFixture("package.json")).then(v => v.version),
+     async () => assert.equal(
+       (await sync.getValidVersion(toFixture("package.json"))).version,
        "0.0.1"));
 
   it("rejects if the version is invalid",
-     () => assert.isRejected(sync.getValidVersion(toFixture("invalid.js"))));
+     () => expectRejection(sync.getValidVersion(toFixture("invalid.js"))));
 });
 
 
@@ -236,18 +235,14 @@ describe("getSources", () => {
 });
 
 describe("verify", () => {
-  function makeTest(name, fixtures, expected) {
-    it(name, () => (expected ?
-                    assert.eventually
-                    .deepEqual(sync.verify(fixtures.map(toFixture)),
-                               expected) :
-                    assert.eventually
-                    .isFalse(sync.verify(fixtures.map(toFixture)))));
+  function makeTest(name, fixtures, expected = false) {
+    it(name, async () => assert.deepEqual(
+      await sync.verify(fixtures.map(toFixture)), expected));
   }
 
   it("empty array", () => {
-    assert.isRejected(sync.verify([]),
-                      Error, "tried to call verify with an empty array");
+    expectRejection(sync.verify([]), Error,
+                    "tried to call verify with an empty array");
   });
 
   makeTest("no error", ["package.json", "tsmodule.ts"], {
@@ -275,8 +270,7 @@ describe("verify", () => {
     }],
   });
 
-  it("bad version", () => assert.isRejected(sync.verify(["invalid.js"]),
-                                            Error));
+  it("bad version", () => expectRejection(sync.verify(["invalid.js"]), Error));
 });
 
 describe("bumpVersion", () => {
@@ -360,9 +354,8 @@ describe("commiting files and creating tag", () => {
     const runner = new sync.Runner();
     // We need to add a non-existent file for this test.
     await setVersionedSources("foo.txt");
-    await assert.isRejected(runner._commitSourcesAndCreateTag("0.0.2"),
-                            Error,
-                            "git add foo.txt failed");
+    await expectRejection(runner._commitSourcesAndCreateTag("0.0.2"), Error,
+                          "git add foo.txt failed");
   });
 });
 
@@ -500,7 +493,7 @@ describe("Runner", () => {
     }
 
     makeTest("fulfills when there is no error", ["package.json"],
-             runner => assert.eventually.equal(runner.verify(), "0.0.1"));
+             async runner => assert.equal(await runner.verify(), "0.0.1"));
     makeTest("emits a message when there is no error", ["package.json"],
              runner => new Promise((resolve, reject) => {
                runner.onMessage((msg) => {
@@ -517,9 +510,8 @@ describe("Runner", () => {
                runner.verify();
              }));
     makeTest("rejects when there is an error", ["package.json", "amd.js"],
-             runner => assert.isRejected(
-               runner.verify(), Error,
-               `Version numbers are inconsistent:
+             runner => expectRejection(runner.verify(), Error,
+                                       `Version numbers are inconsistent:
 package.json:1: ${"0.0.1".red}
 amd.js:2: ${"0.9.0".red}
 `),
@@ -564,7 +556,7 @@ amd.js:2: ${"0.9.0".red}
     }
 
     makeTest("fulfills when there is no error", ["package.json"],
-             runner => assert.isFulfilled(runner.setVersion("9.9.9")));
+             runner => runner.setVersion("9.9.9"));
     makeTest("emits a message when there is no error", ["package.json"],
              runner => new Promise((resolve) => {
                runner.onMessage((msg) => {
@@ -576,11 +568,13 @@ amd.js:2: ${"0.9.0".red}
                runner.setVersion("9.9.9");
              }));
     makeTest("actually changes the version number", ["package.json"],
-             runner => runner.setVersion("9.9.9")
-             .then(() => assert.eventually.equal(
-               sync.getVersion("package.json").then(v => v.version), "9.9.9")));
+             async (runner) => {
+               await runner.setVersion("9.9.9");
+               assert.equal((await sync.getVersion("package.json")).version,
+                            "9.9.9");
+             });
     makeTest("rejects when there is an error", ["package.json", "noversion.js"],
-             runner => assert.isRejected(
+             runner => expectRejection(
                runner.setVersion("9.9.9"), Error,
                "Missing version number in noversion.js."),
              ["noversion.js"]);
@@ -674,7 +668,7 @@ amd.js:2: ${"0.9.0".red}
                const runner = new sync.Runner({
                  verify: true,
                });
-               return assert.isRejected(
+               return expectRejection(
                  runner.run(), Error,
                  "Missing version number in noversion.js.");
              },
@@ -712,7 +706,7 @@ describe("run", () => {
            () => sync.run({ bump: "minor" }));
 
   makeTest("rejects when there is an error", ["package.json", "noversion.js"],
-           () => assert.isRejected(sync.run({
+           () => expectRejection(sync.run({
              verify: true,
            }), Error, "Missing version number in noversion.js."),
            ["noversion.js"]);
