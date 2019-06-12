@@ -12,7 +12,7 @@ development of `semver-sync`.
 
 ## Supported Platforms
 
-`versync` supports Node.js 6 and over.
+`versync` supports Node.js 8 and over.
 
 ## Installation
 

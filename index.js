@@ -3,7 +3,6 @@
 "use strict";
 
 const { exec } = require("child_process");
-const Promise = require("bluebird");
 const fs = require("fs-extra");
 const path = require("path");
 const semver = require("semver");
@@ -81,32 +80,25 @@ function execAsync(command, options) {
  * @returns {Promise<Array.<string>>} The sources. Duplicates are automatically
  * removed.
  */
-exports.getSources = function getSources(extraSources) {
-  return Promise.resolve(["package.json"])
-    .then(sources => ((extraSources && extraSources.length) ?
-          sources.concat(extraSources) : sources))
-    .then(sources => fs.readFile("package.json", "utf-8").then((data) => {
-      const pkg = JSON.parse(data);
-      const { versionedSources } = pkg;
-      if (versionedSources) {
-        if (!(versionedSources instanceof Array ||
-              typeof versionedSources === "string")) {
-          throw new Error(
-            "versionedSources must be an array or a string");
-        }
+exports.getSources = async function getSources(extraSources) {
+  let sources = ["package.json"].concat(extraSources || []);
+  const data = await fs.readFile("package.json", "utf-8");
 
-        sources =
-          sources.concat(versionedSources instanceof Array ?
-                         versionedSources :
-                         [versionedSources]);
-      }
+  const pkg = JSON.parse(data);
+  const { versionedSources } = pkg;
+  if (versionedSources) {
+    if (!(versionedSources instanceof Array ||
+          typeof versionedSources === "string")) {
+      throw new Error("versionedSources must be an array or a string");
+    }
 
-      return sources;
-    }))
+    sources = sources.concat(versionedSources instanceof Array ?
+                             versionedSources : [versionedSources]);
+  }
+
   // We filter out any duplicates from the srcs array to prevent confusion
   // in the output.
-    .then(sources => sources.filter(
-      (val, idx, arr) => arr.indexOf(val) === idx));
+  return sources.filter((val, idx, arr) => arr.indexOf(val) === idx);
 };
 
 /**
@@ -128,40 +120,38 @@ exports.getSources = function getSources(extraSources) {
  * @throws {Error} If ``filename`` is a TypeScript file but the optional
  * TypeScript support is not available.
  */
-exports.getVersion = Promise.method((filename) => {
+exports.getVersion = async function getVersion(filename) {
   const ext = path.extname(filename).slice(1); // Slice: remove the leading dot.
   if (["js", "json", "ts"].indexOf(ext) === -1) {
     throw new Error(`unsupported extension ${ext}`);
   }
 
   if (ext === "ts" && !tspatterns) {
-    throw new Error(`file ${filename} is a TypeScript file but ` +
-                    "the package `typescript` is not available; " +
-                    "please install it.");
+    throw new Error(`file ${filename} is a TypeScript file but the package ` +
+                    "`typescript` is not available; please install it.");
   }
 
-  return fs.readFile(filename, DEFAULT_ENCODING).then((data) => {
-    let fetched;
-    if (ext === "json" || ext === "js") {
-      if (ext === "json") {
-        data = `(${data})`;
-      }
-      fetched = patterns.parse(data);
+  let data = await fs.readFile(filename, DEFAULT_ENCODING);
+  let fetched;
+  if (ext === "json" || ext === "js") {
+    if (ext === "json") {
+      data = `(${data})`;
     }
-    else if (ext === "ts") {
-      fetched = tspatterns.parse(filename, data);
-    }
-    else {
-      throw new Error("should not get here!!");
-    }
+    fetched = patterns.parse(data);
+  }
+  else if (ext === "ts") {
+    fetched = tspatterns.parse(filename, data);
+  }
+  else {
+    throw new Error("should not get here!!");
+  }
 
-    return fetched && {
-      version: fetched.version,
-      line: fetched.line,
-      source: filename,
-    };
-  });
-});
+  return fetched && {
+    version: fetched.version,
+    line: fetched.line,
+    source: filename,
+  };
+};
 
 /**
  * Get a valid version from a file.
@@ -173,20 +163,19 @@ exports.getVersion = Promise.method((filename) => {
  *
  * @throws {InvalidVersionError} If the version is not a valid semver version.
  */
-exports.getValidVersion = function getValidVersion(filename) {
-  return exports.getVersion(filename).then((current) => {
-    const version = current && current.version;
-    if (!version) {
-      throw new InvalidVersionError(`Missing version number in ${filename}.`);
-    }
+exports.getValidVersion = async function getValidVersion(filename) {
+  const current = await exports.getVersion(filename);
+  const version = current && current.version;
+  if (!version) {
+    throw new InvalidVersionError(`Missing version number in ${filename}.`);
+  }
 
-    if (!semver.valid(version)) {
-      throw new InvalidVersionError(
-        `Invalid semver number in ${filename}. Found: ${version}`);
-    }
+  if (!semver.valid(version)) {
+    throw new InvalidVersionError(
+      `Invalid semver number in ${filename}. Found: ${version}`);
+  }
 
-    return current;
-  });
+  return current;
 };
 
 /**
@@ -210,25 +199,21 @@ exports.getValidVersion = function getValidVersion(filename) {
  *
  * @returns {Promise<VerifyResult>}
  */
-exports.verify = function verify(filenames) {
-  return Promise.resolve()
-    .then(() => {
-      if (filenames.length === 0) {
-        throw Error("tried to call verify with an empty array");
-      }
-    })
-    .then(() => Promise.all(filenames
-                            .map(source => exports.getValidVersion(source))))
-    .then((versions) => {
-      const firstVersion = versions[0].version;
-      for (const { version } of versions.slice(1)) {
-        if (version !== firstVersion) {
-          return { consistent: false, versions };
-        }
-      }
+exports.verify = async function verify(filenames) {
+  if (filenames.length === 0) {
+    throw Error("tried to call verify with an empty array");
+  }
+  const versions =
+        await Promise.all(filenames
+                          .map(source => exports.getValidVersion(source)));
+  const firstVersion = versions[0].version;
+  for (const { version } of versions.slice(1)) {
+    if (version !== firstVersion) {
+      return { consistent: false, versions };
+    }
+  }
 
-      return { consistent: true, versions };
-    });
+  return { consistent: true, versions };
 };
 
 
@@ -243,23 +228,19 @@ exports.verify = function verify(filenames) {
  * @returns {Promise} A promise that resolves once the operation is completed.
  */
 exports.setVersion = function setVersion(filenames, version) {
-  return Promise
-    .all(Promise.map(filenames,
-                     filename => exports.getVersion(filename).then(
-                       current => fs.readFile(filename, DEFAULT_ENCODING)
-                         .then((data) => {
-                           if (!current) {
-                             throw new Error(`Missing version number in \
-${filename}.`);
-                           }
-                           const lines = data.split(DEFAULT_SEPARATOR);
-                           const ix = current.line - 1;
-                           lines[ix] = lines[ix].replace(current.version,
-                                                         version);
-                           return fs.writeFile(filename,
-                                               lines.join(DEFAULT_SEPARATOR),
-                                               DEFAULT_ENCODING);
-                         }))));
+  return Promise.all(filenames.map(async (filename) => {
+    const current = await exports.getVersion(filename);
+    const data = await fs.readFile(filename, DEFAULT_ENCODING);
+
+    if (!current) {
+      throw new Error(`Missing version number in ${filename}.`);
+    }
+    const lines = data.split(DEFAULT_SEPARATOR);
+    const ix = current.line - 1;
+    lines[ix] = lines[ix].replace(current.version, version);
+    return fs.writeFile(filename, lines.join(DEFAULT_SEPARATOR),
+                        DEFAULT_ENCODING);
+  }));
 };
 
 /**
@@ -388,25 +369,24 @@ class Runner {
    *
    * @returns {Promise<string>} The current version in the files.
    */
-  verify() {
-    return this.getSourcesToModify()
-      .then(sources => exports.verify(sources))
-      .then(({ consistent, versions }) => {
-        if (!consistent) {
-          let message = "Version numbers are inconsistent:\n";
-          for (const { source, version, line } of versions) {
-            message += `${source}:${line}: ${version.red}\n`;
-          }
-          throw new Error(message);
-        }
+  async verify() {
+    const { consistent, versions } =
+          await exports.verify(await this.getSourcesToModify());
 
-        const currentVersion = versions[0].version;
-        this._emitMessage(
-          `${this._sync ? "Version number in files to be synced is" :
+    if (!consistent) {
+      let message = "Version numbers are inconsistent:\n";
+      for (const { source, version, line } of versions) {
+        message += `${source}:${line}: ${version.red}\n`;
+      }
+      throw new Error(message);
+    }
+
+    const currentVersion = versions[0].version;
+    this._emitMessage(
+      `${this._sync ? "Version number in files to be synced is" :
                           "Everything is in sync, the version number is"}\
  ${currentVersion.bold.green}.`);
-        return currentVersion;
-      });
+    return currentVersion;
   }
 
   /**
@@ -424,7 +404,7 @@ class Runner {
     }
 
     const sources = this._cachedSources =
-            exports.getSources(this._options.sources);
+          exports.getSources(this._options.sources);
     return sources;
   }
 
@@ -438,9 +418,9 @@ class Runner {
    * @returns {Promise<Array.<string> >} The sources. Duplicates are
    * automatically removed.
    */
-  getSourcesToModify() {
+  async getSourcesToModify() {
     if (!this._cachedSourcesToModify) {
-      let sources = this.getSources();
+      let sources = await this.getSources();
 
       if (this._sync) {
         sources = sources.filter(x => x !== "package.json");
@@ -464,7 +444,7 @@ class Runner {
     }
 
     const current = this._cachedCurrent =
-            exports.getValidVersion("package.json");
+          exports.getValidVersion("package.json");
     return current;
   }
 
@@ -475,25 +455,28 @@ class Runner {
    * done. This promise will be rejected if any error occurs during the
    * operation.
    */
-  setVersion(version) {
-    return this.getSourcesToModify().then(
-      sources => exports.setVersion(sources, version).then(() => {
-        this._emitMessage(`Version number was updated to ${version.bold.green} \
+  async setVersion(version) {
+    const sources = await this.getSourcesToModify();
+    await exports.setVersion(sources, version);
+    this._emitMessage(`Version number was updated to ${version.bold.green} \
 in ${sources.join(", ").bold}.`);
-      }));
   }
 
-  _addSources() {
-    return this.getSources().then(
-      sources => Promise.each(sources, file => execAsync(`git add ${file}`)));
+  async _addSources() {
+    const sources = await this.getSources();
+    for (const source of sources) {
+      // We do not want to run these adds in parallel.
+      // eslint-disable-next-line no-await-in-loop
+      await execAsync(`git add ${source}`);
+    }
   }
 
-  _commitSourcesAndCreateTag(version) {
-    return this._addSources()
-      .then(() => execAsync(`git commit -m 'v${version}'`))
-      .then(() => execAsync(`git tag v${version}`))
-      .then(() => this._emitMessage(`Files have been committed and tag \
-${`v${version}`.bold.green} was created.`));
+  async _commitSourcesAndCreateTag(version) {
+    await this._addSources();
+    await execAsync(`git commit -m 'v${version}'`);
+    await execAsync(`git tag v${version}`);
+    this._emitMessage(`Files have been committed and tag \
+${`v${version}`.bold.green} was created.`);
   }
 
   /**
@@ -503,49 +486,47 @@ ${`v${version}`.bold.green} was created.`));
    * @returns {Promise} A promise that resolves once the operations are
    * successful, or rejects if they are not.
    */
-  run() {
+  async run() {
     const { bump, tag, add } = this._options;
-    return Promise.join(
-      this.verify(),
-      this.getCurrent().get("version"),
-      (common, current) => {
-        if (!(bump || tag || add)) {
-          return undefined;
-        }
+    const [common, current] =
+          await Promise.all([this.verify(),
+                             this.getCurrent().then(v => v.version)]);
 
-        return this.getSourcesToModify().then((sources) => {
-          // This may happen if the user is doing a sync and there is no other
-          // file than package.json.
-          if (sources.length === 0) {
-            return undefined;
-          }
+    if (!(bump || tag || add)) {
+      return undefined;
+    }
 
-          let version;
-          if (this._sync) {
-            if (semver.lt(current, common)) {
-              throw new Error(`Version in package.json (${current}) is \
+    const sources = await this.getSourcesToModify();
+
+    // This may happen if the user is doing a sync and there is no other
+    // file than package.json.
+    if (sources.length === 0) {
+      return undefined;
+    }
+
+    let version;
+    if (this._sync) {
+      if (semver.lt(current, common)) {
+        throw new Error(`Version in package.json (${current}) is \
 lower than the version found in other files (${common})`);
-            }
-            version = current;
-          }
-          else {
-            version = exports.bumpVersion(current, bump);
-          }
+      }
+      version = current;
+    }
+    else {
+      version = exports.bumpVersion(current, bump);
+    }
 
-          return this.setVersion(version)
-            .then(() => {
-              if (tag) {
-                return this._commitSourcesAndCreateTag(version);
-              }
+    await this.setVersion(version);
 
-              if (add) {
-                return this._addSources();
-              }
+    if (tag) {
+      return this._commitSourcesAndCreateTag(version);
+    }
 
-              return undefined;
-            });
-        });
-      });
+    if (add) {
+      return this._addSources();
+    }
+
+    return undefined;
   }
 }
 

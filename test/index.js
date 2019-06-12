@@ -8,7 +8,6 @@ const del = require("del");
 const fs = require("fs-extra");
 const path = require("path");
 const mockery = require("mockery");
-const Promise = require("bluebird");
 const chai = require("chai");
 const chaiAsPromised = require("chai-as-promised");
 const sync = require("../");
@@ -60,7 +59,7 @@ describe("getVersion", () => {
   describe("reads version numbers from ", () => {
     function test(name, filename, version) {
       it(name, () => assert.eventually.equal(
-        sync.getVersion(toFixture(filename)).get("version"), version));
+        sync.getVersion(toFixture(filename)).then(v => v.version), version));
     }
 
     test("json", "package.json", "0.0.1");
@@ -86,7 +85,7 @@ describe("getVersion", () => {
   describe("returns line number information from", () => {
     function test(name, filename, line) {
       it(name, () => assert.eventually.equal(
-        sync.getVersion(toFixture(filename)).get("line"), line));
+        sync.getVersion(toFixture(filename)).then(v => v.line), line));
     }
 
     test("json", "package.json", 4);
@@ -95,32 +94,34 @@ describe("getVersion", () => {
     test("export from es6 file", "es6-export.js", 3);
   });
 
-  it("fails when reading ts data without typescript", () => {
+  it("fails when reading ts data without typescript", async () => {
     mockery.enable({
       useCleanCache: true,
       warnOnUnregistered: false,
     });
-    return Promise.try(() => {
+    try {
       mockery.registerSubstitute("typescript", "nonexistent___");
       mockery.registerAllowable("..");
 
       const nots = require(".."); // eslint-disable-line global-require
 
-      return assert.isRejected(
+      await assert.isRejected(
         nots.getVersion("fixtures/tsmodule.ts"),
         Error, "file fixtures/tsmodule.ts is a TypeScript file " +
           "but the package `typescript` is not available; " +
           "please install it.");
-    }).finally(() => {
+    }
+    finally {
       mockery.disable();
-    });
+    }
   });
 });
 
 describe("getValidVersion", () => {
   it("resolves to a version number when the version is valid",
      () => assert.eventually.equal(
-       sync.getValidVersion(toFixture("package.json")).get("version"), "0.0.1"));
+       sync.getValidVersion(toFixture("package.json")).then(v => v.version),
+       "0.0.1"));
 
   it("rejects if the version is invalid",
      () => assert.isRejected(sync.getValidVersion(toFixture("invalid.js"))));
@@ -130,42 +131,43 @@ describe("getValidVersion", () => {
 const tmpdir = "tmp";
 
 function copyFixturesToTmp(files) {
-  return Promise.map(files, (filename) => {
+  return Promise.all(files.map(async (filename) => {
     const fullpath = toFixture(filename);
     const tmpfile = path.join(tmpdir, filename);
-    return fs.copy(fullpath, tmpfile).then(() => tmpfile);
-  });
+    await fs.copy(fullpath, tmpfile);
+    return tmpfile;
+  }));
 }
 
-function *gitInit(options) {
+async function gitInit(options) {
   options = options || {};
-  yield execAsync("git init", options);
-  yield execAsync("git config user.email 'you@example.com'", options);
-  yield execAsync("git config user.name YourName", options);
-  yield execAsync("git add .", options);
-  yield execAsync("git commit -m'Initial commit.'", options);
+  await execAsync("git init", options);
+  await execAsync("git config user.email 'you@example.com'", options);
+  await execAsync("git config user.name YourName", options);
+  await execAsync("git add .", options);
+  await execAsync("git commit -m'Initial commit.'", options);
 }
 
 describe("setVersion sets version numbers in", () => {
-  const setVersionTmp = Promise.coroutine(function *setVersionTmp(
+  async function setVersionTmp(
     files, version) {
-    yield del([tmpdir]);
-    yield fs.ensureDir(tmpdir);
-    const tmpfiles = yield copyFixturesToTmp(files);
+    await del([tmpdir]);
+    await fs.ensureDir(tmpdir);
+    const tmpfiles = await copyFixturesToTmp(files);
 
-    return sync.setVersion(tmpfiles, version).return(tmpfiles);
-  });
+    return sync.setVersion(tmpfiles, version).then(() => tmpfiles);
+  }
 
 
   function test(name, files, version) {
-    it(name, Promise.coroutine(function *_test() {
-      const tmpfiles = yield setVersionTmp(files, version);
+    it(name, async () => {
+      const tmpfiles = await setVersionTmp(files, version);
       assert.equal(tmpfiles.length, files.length);
-      yield Promise.map(tmpfiles,
-                        file => assert.eventually.equal(
-                          sync.getVersion(file).get("version"),
-                          version));
-    }));
+      await Promise.all(tmpfiles.map(async (file) => {
+        const v = await sync.getVersion(file);
+        assert.equal(v.version, version);
+      }));
+    });
   }
 
   test("json files", ["package.json"], "0.0.5");
@@ -174,52 +176,55 @@ describe("setVersion sets version numbers in", () => {
   test("an es6 file", ["es6-export.js"], "0.1.0");
 });
 
-function setVersionedSources(value) {
-  return fs.readFile("package.json").then((data) => {
-    const fixture = JSON.parse(data);
-    if (fixture.name === "versync") {
-      throw new Error("looks like you are trying to modify versync's own " +
-                      "package.json");
-    }
-    fixture.versionedSources = value;
-    return fs.writeFile("package.json", JSON.stringify(fixture));
-  });
+async function setVersionedSources(value) {
+  const data = await fs.readFile("package.json");
+  const fixture = JSON.parse(data);
+  if (fixture.name === "versync") {
+    throw new Error("looks like you are trying to modify versync's own " +
+                    "package.json");
+  }
+  fixture.versionedSources = value;
+  return fs.writeFile("package.json", JSON.stringify(fixture));
 }
 
-function setVersionedSourcesInTmp(value) {
-  return Promise.resolve().then(() => {
-    // eslint-disable-next-line no-shadow
-    const prevdir = process.cwd();
-    process.chdir("tmp");
-    return setVersionedSources(value).then(() => {
-      process.chdir(prevdir);
-    });
-  });
+async function setVersionedSourcesInTmp(value) {
+  // eslint-disable-next-line no-shadow
+  const prevdir = process.cwd();
+  process.chdir("tmp");
+  try {
+    await setVersionedSources(value);
+  }
+  finally {
+    process.chdir(prevdir);
+  }
 }
 
 describe("getSources", () => {
   after(() => del([tmpdir]));
 
-  beforeEach(() => del([tmpdir]).then(() => fs.ensureDir(tmpdir)));
+  beforeEach(async () => {
+    await del([tmpdir]);
+    return fs.ensureDir(tmpdir);
+  });
 
   // versionedSources is an optional value we can use to alter
   // the versionedSources value in the package.json file.
   function makeTest(name, fixtures, versionedSources) {
-    it(name, Promise.coroutine(function *_test() {
-      yield copyFixturesToTmp(fixtures);
+    it(name, async () => {
+      await copyFixturesToTmp(fixtures);
 
       const prevdir = process.cwd(); // eslint-disable-line no-shadow
       try {
         process.chdir("tmp");
         if (versionedSources) {
-          yield setVersionedSources(versionedSources);
+          await setVersionedSources(versionedSources);
         }
-        yield assert.eventually.sameMembers(sync.getSources(), fixtures);
+        assert.sameMembers(await sync.getSources(), fixtures);
       }
       finally {
         process.chdir(prevdir);
       }
-    }));
+    });
   }
 
   makeTest("package.json without optional files", ["package.json"]);
@@ -300,35 +305,38 @@ describe("bumpVersion", () => {
 describe("commiting files and creating tag", () => {
   after(() => del([tmpdir]));
 
-  beforeEach(() => del([tmpdir]).then(() => fs.ensureDir(tmpdir)));
+  beforeEach(async () => {
+    await del([tmpdir]);
+    return fs.ensureDir(tmpdir);
+  });
 
   function makeTest(name, fn) {
     const fixtures = ["package.json", "component.json"];
-    it(name, Promise.coroutine(function *_test() {
-      yield copyFixturesToTmp(fixtures);
+    it(name, async () => {
+      await copyFixturesToTmp(fixtures);
 
       const prevdir = process.cwd(); // eslint-disable-line no-shadow
       try {
         process.chdir("tmp");
 
-        yield* gitInit();
-        yield fs.writeFile("test.txt", "");
+        await gitInit();
+        await fs.writeFile("test.txt", "");
 
-        yield setVersionedSources(["component.json"]);
-        yield sync.setVersion(fixtures, "0.0.2");
+        await setVersionedSources(["component.json"]);
+        await sync.setVersion(fixtures, "0.0.2");
 
-        yield fn(fixtures);
+        await fn(fixtures);
       }
       finally {
         process.chdir(prevdir);
       }
-    }));
+    });
   }
 
-  makeTest("works", Promise.coroutine(function *_test() {
+  makeTest("works", async () => {
     const runner = new sync.Runner();
-    yield runner._commitSourcesAndCreateTag("0.0.2");
-    let { stdout } = yield execAsync("git status -s");
+    await runner._commitSourcesAndCreateTag("0.0.2");
+    let { stdout } = await execAsync("git status -s");
 
     const files = stdout.split("\n");
     assert.isTrue(files.length > 0);
@@ -337,26 +345,25 @@ describe("commiting files and creating tag", () => {
       file => file.match(/(?:component|package)\.json/));
     assert.isTrue(noUnCommitted, "no staged or unstaged files");
 
-    ({ stdout } = yield execAsync("git log -1 --pretty=%B"));
+    ({ stdout } = await execAsync("git log -1 --pretty=%B"));
 
     const commit = stdout.replace(/\n/g, "");
     assert.equal(commit, "v0.0.2", "commit correctly created");
 
-    ({ stdout } = yield execAsync("git describe --abbrev=0 --tags"));
+    ({ stdout } = await execAsync("git describe --abbrev=0 --tags"));
 
     const tag = stdout.replace(/\n/g, "");
     assert.equal(tag, "v0.0.2", "tag correctly created");
-  }));
+  });
 
-  makeTest("reports failures properly", Promise.coroutine(function *_test() {
+  makeTest("reports failures properly", async () => {
     const runner = new sync.Runner();
     // We need to add a non-existent file for this test.
-    yield setVersionedSources("foo.txt");
-    yield assert.isRejected(
-      runner._commitSourcesAndCreateTag("0.0.2"),
-      Error,
-      "git add foo.txt failed");
-  }));
+    await setVersionedSources("foo.txt");
+    await assert.isRejected(runner._commitSourcesAndCreateTag("0.0.2"),
+                            Error,
+                            "git add foo.txt failed");
+  });
 });
 
 function cleanOutput(output) {
@@ -366,27 +373,29 @@ function cleanOutput(output) {
 describe("Runner", () => {
   after(() => del([tmpdir]));
 
-  beforeEach(() => del([tmpdir]).then(() => fs.ensureDir(tmpdir)));
+  beforeEach(async () => {
+    await del([tmpdir]);
+    return fs.ensureDir(tmpdir);
+  });
 
   describe("getSources", () => {
     function makeTest(name, fixtures, versionedSources, options) {
-      it(name, Promise.coroutine(function *_test() {
+      it(name, async () => {
         const runner = new sync.Runner(options);
-        yield copyFixturesToTmp(fixtures);
+        await copyFixturesToTmp(fixtures);
 
         const prevdir = process.cwd(); // eslint-disable-line no-shadow
         try {
           process.chdir("tmp");
           if (versionedSources) {
-            yield setVersionedSources(versionedSources);
+            await setVersionedSources(versionedSources);
           }
-          yield assert.eventually.sameMembers(runner.getSources(),
-                                              fixtures);
+          assert.sameMembers(await runner.getSources(), fixtures);
         }
         finally {
           process.chdir(prevdir);
         }
-      }));
+      });
     }
 
 
@@ -405,26 +414,25 @@ describe("Runner", () => {
 
   describe("getSourcesToModify", () => {
     function _makeTest(name, fixtures, versionedSources, options) {
-      it(name, Promise.coroutine(function *_test() {
+      it(name, async () => {
         const runner = new sync.Runner(options);
-        yield copyFixturesToTmp(fixtures);
+        await copyFixturesToTmp(fixtures);
 
         const prevdir = process.cwd(); // eslint-disable-line no-shadow
         try {
           process.chdir("tmp");
           if (versionedSources) {
-            yield setVersionedSources(versionedSources);
+            await setVersionedSources(versionedSources);
           }
-          yield assert.eventually.sameMembers(
-            runner.getSourcesToModify(),
-            options.bump === "sync" ?
-              fixtures.filter(x => x !== "package.json") :
-              fixtures);
+          assert.sameMembers(await runner.getSourcesToModify(),
+                             options.bump === "sync" ?
+                             fixtures.filter(x => x !== "package.json") :
+                             fixtures);
         }
         finally {
           process.chdir(prevdir);
         }
-      }));
+      });
     }
 
     function makeTest(name, fixtures, versionedSources, options) {
@@ -449,19 +457,19 @@ describe("Runner", () => {
 
   describe("getCurrent", () => {
     function makeTest(name, fixtures, expected) {
-      it(name, Promise.coroutine(function *_test() {
+      it(name, async () => {
         const runner = new sync.Runner();
-        yield copyFixturesToTmp(fixtures);
+        await copyFixturesToTmp(fixtures);
 
         const prevdir = process.cwd(); // eslint-disable-line no-shadow
         try {
           process.chdir("tmp");
-          yield assert.eventually.deepEqual(runner.getCurrent(), expected);
+          assert.deepEqual(await runner.getCurrent(), expected);
         }
         finally {
           process.chdir(prevdir);
         }
-      }));
+      });
     }
 
     makeTest("returns a correct value", ["package.json"], {
@@ -473,22 +481,22 @@ describe("Runner", () => {
 
   describe("verify", () => {
     function makeTest(name, fixtures, fn, versionedSources, bump) {
-      it(name, Promise.coroutine(function *_test() {
+      it(name, async () => {
         const runner = new sync.Runner({ bump });
-        yield copyFixturesToTmp(fixtures);
+        await copyFixturesToTmp(fixtures);
 
         const prevdir = process.cwd(); // eslint-disable-line no-shadow
         try {
           process.chdir("tmp");
           if (versionedSources) {
-            yield setVersionedSources(versionedSources);
+            await setVersionedSources(versionedSources);
           }
-          yield fn(runner, fixtures);
+          await fn(runner, fixtures);
         }
         finally {
           process.chdir(prevdir);
         }
-      }));
+      });
     }
 
     makeTest("fulfills when there is no error", ["package.json"],
@@ -537,22 +545,22 @@ amd.js:2: ${"0.9.0".red}
 
   describe("setVersion", () => {
     function makeTest(name, fixtures, fn, versionedSources) {
-      it(name, Promise.coroutine(function *_test() {
+      it(name, async () => {
         const runner = new sync.Runner();
-        yield copyFixturesToTmp(fixtures);
+        await copyFixturesToTmp(fixtures);
 
         const prevdir = process.cwd(); // eslint-disable-line no-shadow
         try {
           process.chdir("tmp");
           if (versionedSources) {
-            yield setVersionedSources(versionedSources);
+            await setVersionedSources(versionedSources);
           }
-          yield fn(runner, fixtures);
+          await fn(runner, fixtures);
         }
         finally {
           process.chdir(prevdir);
         }
-      }));
+      });
     }
 
     makeTest("fulfills when there is no error", ["package.json"],
@@ -570,7 +578,7 @@ amd.js:2: ${"0.9.0".red}
     makeTest("actually changes the version number", ["package.json"],
              runner => runner.setVersion("9.9.9")
              .then(() => assert.eventually.equal(
-               sync.getVersion("package.json").get("version"), "9.9.9")));
+               sync.getVersion("package.json").then(v => v.version), "9.9.9")));
     makeTest("rejects when there is an error", ["package.json", "noversion.js"],
              runner => assert.isRejected(
                runner.setVersion("9.9.9"), Error,
@@ -580,31 +588,32 @@ amd.js:2: ${"0.9.0".red}
 
   describe("run", () => {
     function makeTest(name, fixtures, fn, versionedSources) {
-      it(name, Promise.coroutine(function *_test() {
-        yield copyFixturesToTmp(fixtures);
+      it(name, async () => {
+        await copyFixturesToTmp(fixtures);
 
         const prevdir = process.cwd(); // eslint-disable-line no-shadow
         try {
           process.chdir("tmp");
           if (versionedSources) {
-            yield setVersionedSources(versionedSources);
+            await setVersionedSources(versionedSources);
           }
-          yield fn(fixtures);
+          await fn(fixtures);
         }
         finally {
           process.chdir(prevdir);
         }
-      }));
+      });
     }
 
     makeTest("fulfills when there is no error", ["package.json"], () => {
       const runner = new sync.Runner({
         bump: "minor",
       });
-      return assert.isFulfilled(runner.run());
+
+      return runner.run();
     });
 
-    makeTest("emits messages when there are no errors", ["package.json"], () => {
+    makeTest("emits messages when no errors", ["package.json"], async () => {
       const runner = new sync.Runner({
         bump: "minor",
       });
@@ -613,17 +622,16 @@ amd.js:2: ${"0.9.0".red}
         messages.push(cleanOutput(msg));
       });
 
-      return runner.run({
+      await runner.run({
         bump: "minor",
-      }).then(() => {
-        assert.deepEqual(messages, [
-          "Everything is in sync, the version number is 0.0.1.",
-          "Version number was updated to 0.1.0 in package.json.",
-        ]);
       });
+      assert.deepEqual(messages, [
+        "Everything is in sync, the version number is 0.0.1.",
+        "Version number was updated to 0.1.0 in package.json.",
+      ]);
     });
 
-    makeTest("accepts onMessage as function", ["package.json"], () => {
+    makeTest("accepts onMessage as function", ["package.json"], async () => {
       const messages = [];
       const runner = new sync.Runner({
         bump: "minor",
@@ -632,17 +640,17 @@ amd.js:2: ${"0.9.0".red}
         },
       });
 
-      return runner.run({
+      await runner.run({
         bump: "minor",
-      }).then(() => {
-        assert.deepEqual(messages, [
-          "Everything is in sync, the version number is 0.0.1.",
-          "Version number was updated to 0.1.0 in package.json.",
-        ]);
       });
+
+      assert.deepEqual(messages, [
+        "Everything is in sync, the version number is 0.0.1.",
+        "Version number was updated to 0.1.0 in package.json.",
+      ]);
     });
 
-    makeTest("accepts onMessage as array", ["package.json"], () => {
+    makeTest("accepts onMessage as array", ["package.json"], async () => {
       const messages = [];
       const runner = new sync.Runner({
         bump: "minor",
@@ -651,14 +659,14 @@ amd.js:2: ${"0.9.0".red}
         }],
       });
 
-      return runner.run({
+      await runner.run({
         bump: "minor",
-      }).then(() => {
-        assert.deepEqual(messages, [
-          "Everything is in sync, the version number is 0.0.1.",
-          "Version number was updated to 0.1.0 in package.json.",
-        ]);
       });
+
+      assert.deepEqual(messages, [
+        "Everything is in sync, the version number is 0.0.1.",
+        "Version number was updated to 0.1.0 in package.json.",
+      ]);
     });
 
     makeTest("rejects when there is an error", ["package.json", "noversion.js"],
@@ -677,30 +685,31 @@ amd.js:2: ${"0.9.0".red}
 describe("run", () => {
   after(() => del([tmpdir]));
 
-  beforeEach(() => del([tmpdir]).then(() => fs.ensureDir(tmpdir)));
+  beforeEach(async () => {
+    await del([tmpdir]);
+    return fs.ensureDir(tmpdir);
+  });
 
   function makeTest(name, fixtures, fn, versionedSources) {
-    it(name, Promise.coroutine(function *_test() {
-      yield copyFixturesToTmp(fixtures);
+    it(name, async () => {
+      await copyFixturesToTmp(fixtures);
 
       const prevdir = process.cwd(); // eslint-disable-line no-shadow
       try {
         process.chdir("tmp");
         if (versionedSources) {
-          yield setVersionedSources(versionedSources);
+          await setVersionedSources(versionedSources);
         }
-        yield fn(fixtures);
+        await fn(fixtures);
       }
       finally {
         process.chdir(prevdir);
       }
-    }));
+    });
   }
 
   makeTest("fulfills when there is no error", ["package.json"],
-           () => assert.isFulfilled(sync.run({
-             bump: "minor",
-           })));
+           () => sync.run({ bump: "minor" }));
 
   makeTest("rejects when there is an error", ["package.json", "noversion.js"],
            () => assert.isRejected(sync.run({
@@ -718,8 +727,10 @@ describe("running versync", function runningVersync() {
 
   after(() => del([tmpdir]));
 
-  beforeEach(() => del([tmpdir])
-             .then(() => fs.ensureDir(tmpdir)));
+  beforeEach(async () => {
+    await del([tmpdir]);
+    return fs.ensureDir(tmpdir);
+  });
 
   function execVersync(args, silent) {
     options.silentFailure = silent;
@@ -731,133 +742,127 @@ describe("running versync", function runningVersync() {
     assert.equal(cleanOutput(result.stdout), expectedStdout);
   }
 
-  it("verify", Promise.coroutine(function *test() {
-    yield copyFixturesToTmp(["package.json", "component.json"]);
-    yield setVersionedSourcesInTmp(["component.json"]);
+  it("verify", async () => {
+    await copyFixturesToTmp(["package.json", "component.json"]);
+    await setVersionedSourcesInTmp(["component.json"]);
 
-    const result = yield execVersync("-v");
-    assertGood(result,
+    assertGood(await execVersync("-v"),
                "[OK] Everything is in sync, the version number is 0.0.1.\n");
-  }));
+  });
 
-  it("bump", Promise.coroutine(function *test() {
-    const tmpfiles = yield copyFixturesToTmp(["package.json", "component.json"]);
-    yield setVersionedSourcesInTmp(["component.json"]);
+  it("bump", async () => {
+    const tmpfiles = await copyFixturesToTmp(["package.json", "component.json"]);
+    await setVersionedSourcesInTmp(["component.json"]);
 
-    const result = yield execVersync("-b 0.2.0");
-    assertGood(result, `\
+    assertGood(await execVersync("-b 0.2.0"), `\
 [OK] Everything is in sync, the version number is 0.0.1.
 [OK] Version number was updated to 0.2.0 in package.json, component.json.
 `);
-    yield Promise.map(
-      tmpfiles,
-      file => assert.eventually.equal(sync.getVersion(file).get("version"),
-                                      "0.2.0"));
-  }));
+    await Promise.all(
+      tmpfiles.map(async file => assert.equal(await sync.getVersion(file)
+                                              .then(v => v.version),
+                                              "0.2.0")));
+  });
 
-  it("bump = \"sync\" fails on lower version",
-     Promise.coroutine(function *test() {
-       yield copyFixturesToTmp(["package.json", "assigned.js", "es6.js"]);
+  it("bump = \"sync\" fails on lower version", async () => {
+    await copyFixturesToTmp(["package.json", "assigned.js", "es6.js"]);
 
-       yield setVersionedSourcesInTmp(["assigned.js", "es6.js"]);
-       yield execVersync("-b sync", true).catch((err) => {
-         assert.equal(cleanOutput(err.stdout), `\
+    await setVersionedSourcesInTmp(["assigned.js", "es6.js"]);
+    await execVersync("-b sync", true).catch((err) => {
+      assert.equal(cleanOutput(err.stdout), `\
 [OK] Version number in files to be synced is 0.0.7.
 [ERROR] Version in package.json (0.0.1) is lower than the version found in \
 other files (0.0.7)
 `);
-       });
-     }));
+    });
+  });
 
-  it("bump = \"sync\"", Promise.coroutine(function *test() {
+  it("bump = \"sync\"", async () => {
     const tmpfiles =
-          yield copyFixturesToTmp(["package.json", "assigned.js", "es6.js"]);
+          await copyFixturesToTmp(["package.json", "assigned.js", "es6.js"]);
 
     const prevdir = process.cwd(); // eslint-disable-line no-shadow
     try {
       process.chdir("tmp");
-      yield setVersionedSources(["assigned.js", "es6.js"]);
-      yield execAsync("npm version 0.2.0");
+      await setVersionedSources(["assigned.js", "es6.js"]);
+      await execAsync("npm version 0.2.0");
     }
     finally {
       process.chdir(prevdir);
     }
 
-    const result = yield execVersync("-b sync");
-    assertGood(result, `\
+    assertGood(await execVersync("-b sync"), `\
 [OK] Version number in files to be synced is 0.0.7.
 [OK] Version number was updated to 0.2.0 in assigned.js, es6.js.
 `);
-    yield Promise.map(
-      tmpfiles,
-      file => assert.eventually.equal(sync.getVersion(file).get("version"),
-                                      "0.2.0"));
-  }));
+    await Promise.all(
+      tmpfiles.map(async file => assert.equal(await sync.getVersion(file)
+                                              .then(v => v.version),
+                                              "0.2.0")));
+  });
 
-  it("verify failure", Promise.coroutine(function *test() {
-    yield copyFixturesToTmp(["package.json", "invalid.js", "invalid.ts"]);
+  it("verify failure", async () => {
+    await copyFixturesToTmp(["package.json", "invalid.js", "invalid.ts"]);
 
-    yield execVersync("-v -s invalid.js", true).catch((err) => {
+    await execVersync("-v -s invalid.js", true).catch((err) => {
       assert.equal(cleanOutput(err.stdout),
                    "[ERROR] Invalid semver number in invalid.js. " +
                    "Found: version\n");
     });
-  }));
+  });
 
-  it("tag", Promise.coroutine(function *test() {
-    yield copyFixturesToTmp(["package.json", "component.json"]);
-    yield setVersionedSourcesInTmp(["component.json"]);
+  it("tag", async () => {
+    await copyFixturesToTmp(["package.json", "component.json"]);
+    await setVersionedSourcesInTmp(["component.json"]);
 
-    yield* gitInit({ cwd: "tmp" });
+    await gitInit({ cwd: "tmp" });
 
-    const result = yield execVersync("-b 0.2.0 -t");
-    assertGood(result, `\
+    assertGood(await execVersync("-b 0.2.0 -t"), `\
 [OK] Everything is in sync, the version number is 0.0.1.
 [OK] Version number was updated to 0.2.0 in package.json, component.json.
 [OK] Files have been committed and tag v0.2.0 was created.
 `);
-  }));
+  });
 
-  it("-t fails if -b is not used", Promise.coroutine(function *test() {
-    yield copyFixturesToTmp(["package.json", "component.json"]);
-    yield setVersionedSourcesInTmp(["component.json"]);
+  it("-t fails if -b is not used", async () => {
+    await copyFixturesToTmp(["package.json", "component.json"]);
+    await setVersionedSourcesInTmp(["component.json"]);
 
-    yield* gitInit({ cwd: "tmp" });
+    await gitInit({ cwd: "tmp" });
 
-    yield execVersync("-t", true).catch((err) => {
+    await execVersync("-t", true).catch((err) => {
       assert.match(cleanOutput(err.stdout),
                    /^The option -t is not valid without -b/);
     });
-  }));
+  });
 
-  it("add", Promise.coroutine(function *test() {
-    yield copyFixturesToTmp(["package.json", "component.json"]);
-    yield setVersionedSourcesInTmp(["component.json"]);
+  it("add", async () => {
+    await copyFixturesToTmp(["package.json", "component.json"]);
+    await setVersionedSourcesInTmp(["component.json"]);
 
-    yield* gitInit({ cwd: "tmp" });
+    await gitInit({ cwd: "tmp" });
 
-    const result = yield execVersync("-b 0.2.0 -a");
-    assertGood(result, `\
+    assertGood(await execVersync("-b 0.2.0 -a"), `\
 [OK] Everything is in sync, the version number is 0.0.1.
 [OK] Version number was updated to 0.2.0 in package.json, component.json.
 `);
 
-    const { stdout } = yield execAsync("git status -s", { cwd: "tmp" });
+    const { stdout } = await execAsync("git status -s", { cwd: "tmp" });
     assert.equal(stdout, `\
 M  component.json
 M  package.json
 `);
-  }));
+  });
 
-  it("-a fails if -b is not used", Promise.coroutine(function *test() {
-    yield copyFixturesToTmp(["package.json", "component.json"]);
-    yield setVersionedSourcesInTmp(["component.json"]);
+  it("-a fails if -b is not used", async () => {
+    await copyFixturesToTmp(["package.json", "component.json"]);
+    await setVersionedSourcesInTmp(["component.json"]);
 
-    yield* gitInit({ cwd: "tmp" });
+    await gitInit({ cwd: "tmp" });
 
-    yield execVersync("-a", true).catch((err) => {
+    await execVersync("-a", true).catch((err) => {
       assert.match(cleanOutput(err.stdout),
                    /^The option -a is not valid without -b/);
     });
-  }));
+  });
 });
