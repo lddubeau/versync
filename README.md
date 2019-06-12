@@ -1,6 +1,6 @@
 # versync
 
-`versync` is a node.js module that enables you to synchronize version numbers
+`versync` is a node.js package that enables you to synchronize version numbers
 accross `package.json` and other source files of your choosing.
 
 This software is a fork of
@@ -133,9 +133,8 @@ facilities to create an AST of TypeScript sources.
 
 The AST patterns used to find the nodes which hold the version properties are in
 the `patterns.js` and `tspatterns.ts` source files. It should work on most types
-xof structures, if you find one that doesn't please log an issue. The module has
-automated tests for this pattern matching, using some real-life libraries and it
-seems to work pretty well.
+of structures. If you find a structure that isn't processed correctly, please
+submit an issue.
 
 ## Console help
 
@@ -175,10 +174,10 @@ Optional arguments:
 
 ## API
 
-You can now import versync and use its exported API. The code in
-`index.js` has been commented using JSDoc 3 doclets. We do not yet
-generate documentation from it, so you have to read the code to read
-the documentation of the API. In brief, you can now do:
+You can now import versync and use its exported API. The code in `index.js` has
+been commented using JSDoc 3 doclets. We do not yet generate documentation from
+it, so you have to read the code to read the documentation of the API. In brief,
+you can now do:
 
 ```js
 const versync = require("versync");
@@ -194,8 +193,3 @@ runner.run().then(() => {
 
 This package is released under [the MIT
 License](http://opensource.org/licenses/MIT).
-
-## Contributing
-
-We are targetting the flavor of JavaScript that Node v6 and later support
-natively.
