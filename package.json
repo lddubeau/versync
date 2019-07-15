@@ -36,8 +36,8 @@
     "semver": "^6.2.0"
   },
   "devDependencies": {
-    "@commitlint/cli": "^8.0.0",
-    "@commitlint/config-angular": "^8.0.0",
+    "@commitlint/cli": "^8.1.0",
+    "@commitlint/config-angular": "^8.1.0",
     "chai": "^4.2.0",
     "conventional-changelog-cli": "^2.0.22",
     "del": "^4.1.1",
