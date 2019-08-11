@@ -1,4 +1,3 @@
-/* global require describe it process before beforeEach after */
 /* eslint-env mocha */
 
 "use strict";
@@ -432,7 +431,7 @@ describe("Runner", () => {
       options = options || {};
       _makeTest(`${name} (not-sync)`, fixtures, versionedSources, options);
       _makeTest(`${name} (sync)`, fixtures, versionedSources,
-                Object.assign({}, options, { bump: "sync" }));
+                { ...options, bump: "sync" });
     }
 
     makeTest("includes package.json by default", ["package.json"]);

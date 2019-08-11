@@ -1,5 +1,3 @@
-/* global require exports */
-
 "use strict";
 
 const ts = require("typescript");
