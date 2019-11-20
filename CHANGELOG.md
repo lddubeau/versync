@@ -1,3 +1,35 @@
+<a name="5.0.0"></a>
+# [5.0.0](https://github.com/lddubeau/versync/compare/v4.1.0...v5.0.0) (2019-11-20)
+
+
+### Code Refactoring
+
+* modernize the code ([fe4867b](https://github.com/lddubeau/versync/commit/fe4867b))
+* remove special support for bower.json and component.json ([c5d3c24](https://github.com/lddubeau/versync/commit/c5d3c24))
+
+
+### Features
+
+* export ExecutionError ([9b0c23b](https://github.com/lddubeau/versync/commit/9b0c23b))
+* implement retry of git commands ([a67956a](https://github.com/lddubeau/versync/commit/a67956a))
+* provide more diagnosis when an ExecutionError occurs ([2eaa90b](https://github.com/lddubeau/versync/commit/2eaa90b))
+* versync now uses execFile rather than exec to launch children ([b30783c](https://github.com/lddubeau/versync/commit/b30783c))
+
+
+### BREAKING CHANGES
+
+* the switch from exec to execFile *could* in theory cause some
+usages of versync that previously worked to now fail. I'd expect the likelihood
+of such occurence to be extremely small because attempts to take advantage of
+the shell interpretation provided by exec would most likely fail in other
+ways. (E.g. putting quotes in a version number would make semver checks fail.)
+* we drop support for Node versions earlier than 8.
+* the special handling of bower.json and component.json has been
+removed. If you still need to maintain these files, you can explicitly list them
+in ``versionedSources``.
+
+
+
 <a name="4.1.0"></a>
 # [4.1.0](https://github.com/lddubeau/versync/compare/v4.0.0...v4.1.0) (2018-08-10)
 
