@@ -4,7 +4,7 @@
 
 const fs = require("fs");
 const { ArgumentParser } = require("argparse");
-const sync = require("../");
+const versync = require("../");
 require("colors");
 
 /* eslint-disable no-console */
@@ -98,7 +98,7 @@ if (argv.sources) {
   argv.sources = argv.sources.split(",");
 }
 
-const runner = new sync.Runner(argv);
+const runner = new versync.Runner(argv);
 runner.onMessage((message) => {
   console.log(`${SUCCESS}${message}`);
 });
