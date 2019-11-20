@@ -105,5 +105,10 @@ runner.onMessage((message) => {
 
 runner.run().catch((err) => {
   console.log(`${ERROR}${err.message}`);
+  if (err instanceof versync.ExecutionError) {
+    console.log(`${ERROR}failed with code: ${err.originalError.code}`);
+    console.log(`${ERROR}captured stderr: ${err.stderr}`);
+    console.log(`${ERROR}captured stdout: ${err.stdout}`);
+  }
   process.exit(1);
 });
