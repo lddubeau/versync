@@ -50,6 +50,9 @@ class ExecutionError extends Error {
   }
 }
 
+exports.ExecutionError = ExecutionError;
+
+
 function execAsync(command, options) {
   return new Promise((resolve, reject) => {
     exec(command, options, (err, stdout, stderr) => {
