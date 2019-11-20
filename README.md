@@ -125,6 +125,27 @@ What will happen when you run `npm version` is:
 
 4. `npm` will run `git add package.json`, commit the changes and add a tag.
 
+### Integration with `git`
+
+The flags `-a` and `-t` cause versync to issue `git` commands. Unfortunately,
+when multiple tools attempt to run git commands at the same time, they may get a
+lock file failure. Some IDEs, for instance, may issue `git` commands when files
+change on disk. So it is possible to run into the following scenario:
+
+1. `npm version` changes a file on disk.
+
+2. The IDE detects the change and issues a `git` command.
+
+3. `npm version` launches `versync -b sync -a`, which starts a `git add`
+command.
+
+Steps 2 and 3 are in a race. Versync may start `git add` before the `git`
+command launched by the IDE has completed. This causes `git add` to fail because
+of the lock file created by the other `git` command.
+
+Versync now tries to detect such cases and retries a `git` command that failed,
+if it looks like it may have been due to a race condition like described above.
+
 ## How it works
 
 The module uses [esprima](https://github.com/jquery/esprima) to create an AST of

@@ -70,6 +70,42 @@ function execFileAsync(command, args) {
   });
 }
 
+async function delay(timeout) {
+  await new Promise(resolve => setTimeout(resolve, timeout));
+}
+
+//
+// This function tries to execute a git command a certain number of times if it
+// fails in a way that indicates that there was a race condition.
+//
+async function execGit(args) {
+  let remaining = 5; // We arbitrarily try 5 times.
+  async function attempt() {
+    try {
+      return execFileAsync("git", args);
+    }
+    catch (err) {
+      //
+      // We check for code 128. Some git errors other than a lock file result in
+      // an 128 exit code so we *may* be retrying for nothing. However, when a
+      // lock file error occurs, the error code is 128. This allows us to not
+      // retry for everything.
+      //
+      if (!(err instanceof ExecutionError) || err.originalError.code !== 128 ||
+          --remaining === 0) {
+        throw err;
+      }
+
+      // Wait a bit before the next try.
+      await delay(100);
+
+      return attempt();
+    }
+  }
+
+  return attempt();
+}
+
 /**
  * Get a list of sources to process. This list includes by default
  * ``package.json``. It also includes the files specified by the
@@ -468,14 +504,14 @@ in ${sources.join(", ").bold}.`);
     for (const source of sources) {
       // We do not want to run these adds in parallel.
       // eslint-disable-next-line no-await-in-loop
-      await execFileAsync("git", ["add", source]);
+      await execGit(["add", source]);
     }
   }
 
   async _commitSourcesAndCreateTag(version) {
     await this._addSources();
-    await execFileAsync("git", ["commit", "-m", `v${version}`]);
-    await execFileAsync("git", ["tag", `v${version}`]);
+    await execGit(["commit", "-m", `v${version}`]);
+    await execGit(["tag", `v${version}`]);
     this._emitMessage(`Files have been committed and tag \
 ${`v${version}`.bold.green} was created.`);
   }
