@@ -1,6 +1,6 @@
 "use strict";
 
-const { exec } = require("child_process");
+const { execFile } = require("child_process");
 const fs = require("fs-extra");
 const path = require("path");
 const semver = require("semver");
@@ -53,11 +53,12 @@ class ExecutionError extends Error {
 exports.ExecutionError = ExecutionError;
 
 
-function execAsync(command, options) {
+function execFileAsync(command, args) {
   return new Promise((resolve, reject) => {
-    exec(command, options, (err, stdout, stderr) => {
+    execFile(command, args, (err, stdout, stderr) => {
       if (err) {
-        reject(new ExecutionError(`${command} failed`, err, stderr, stdout));
+        reject(new ExecutionError(`${command} ${args.join(" ")} failed`, err,
+                                  stderr, stdout));
         return;
       }
 
@@ -68,7 +69,6 @@ function execAsync(command, options) {
     });
   });
 }
-
 
 /**
  * Get a list of sources to process. This list includes by default
@@ -468,14 +468,14 @@ in ${sources.join(", ").bold}.`);
     for (const source of sources) {
       // We do not want to run these adds in parallel.
       // eslint-disable-next-line no-await-in-loop
-      await execAsync(`git add ${source}`);
+      await execFileAsync("git", ["add", source]);
     }
   }
 
   async _commitSourcesAndCreateTag(version) {
     await this._addSources();
-    await execAsync(`git commit -m 'v${version}'`);
-    await execAsync(`git tag v${version}`);
+    await execFileAsync("git", ["commit", "-m", `v${version}`]);
+    await execFileAsync("git", ["tag", `v${version}`]);
     this._emitMessage(`Files have been committed and tag \
 ${`v${version}`.bold.green} was created.`);
   }
