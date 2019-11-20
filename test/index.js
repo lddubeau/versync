@@ -8,10 +8,12 @@ const fs = require("fs-extra");
 const path = require("path");
 const mockery = require("mockery");
 const chai = require("chai");
-const { expectRejection } = require("expect-rejection");
+const { expectRejection, use } = require("expect-rejection");
 const sync = require("../");
 
 const { assert } = chai;
+
+use(chai);
 
 function execAsync(command, options) {
   options = options || {};
