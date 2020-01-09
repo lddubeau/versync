@@ -53,6 +53,7 @@ class ExecutionError extends Error {
 exports.ExecutionError = ExecutionError;
 
 
+// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 function execFileAsync(command, args) {
   return new Promise((resolve, reject) => {
     execFile(command, args, (err, stdout, stderr) => {
@@ -264,8 +265,8 @@ exports.verify = async function verify(filenames) {
  *
  * @returns {Promise} A promise that resolves once the operation is completed.
  */
-exports.setVersion = function setVersion(filenames, version) {
-  return Promise.all(filenames.map(async (filename) => {
+exports.setVersion =
+  (filenames, version) => Promise.all(filenames.map(async filename => {
     const current = await exports.getVersion(filename);
     const data = await fs.readFile(filename, DEFAULT_ENCODING);
 
@@ -278,7 +279,6 @@ exports.setVersion = function setVersion(filenames, version) {
     return fs.writeFile(filename, lines.join(DEFAULT_SEPARATOR),
                         DEFAULT_ENCODING);
   }));
-};
 
 /**
  * A valid semver, or one of the values ``"major"``, ``"minor"``, ``"patch"``.
@@ -569,6 +569,4 @@ lower than the version found in other files (${common})`);
 
 exports.Runner = Runner;
 
-exports.run = function run(options) {
-  return new Runner(options).run();
-};
+exports.run = options => new Runner(options).run();

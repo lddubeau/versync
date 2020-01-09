@@ -2,10 +2,10 @@
 
 const ts = require("typescript");
 
-function getLine(sourceFile, node) {
-  return sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile))
-    .line + 1; // + 1 because it is 0-based by default.
-}
+const getLine =
+      (sourceFile, node) => sourceFile
+      .getLineAndCharacterOfPosition(node.getStart(sourceFile))
+      .line + 1; // + 1 because it is 0-based by default.;
 
 exports.parse = function parse(filename, data) {
   const sourceFile = ts.createSourceFile(filename, data);

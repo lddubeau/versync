@@ -43,9 +43,7 @@ function execAsync(command, options) {
   });
 }
 
-function toFixture(filename) {
-  return `fixtures/${filename}`;
-}
+const toFixture = filename => `fixtures/${filename}`;
 
 let prevdir;
 before(() => {
@@ -57,6 +55,7 @@ after(() => process.chdir(prevdir));
 
 describe("getVersion", () => {
   describe("reads version numbers from ", () => {
+      // eslint-disable-next-line no-shadow
     function test(name, filename, version) {
       it(name, async () => assert.equal(
         (await sync.getVersion(toFixture(filename))).version, version));
@@ -83,6 +82,7 @@ describe("getVersion", () => {
   });
 
   describe("returns line number information from", () => {
+      // eslint-disable-next-line no-shadow
     function test(name, filename, line) {
       it(name, async () => assert.equal(
         (await sync.getVersion(toFixture(filename))).line, line));
@@ -130,14 +130,12 @@ describe("getValidVersion", () => {
 
 const tmpdir = "tmp";
 
-function copyFixturesToTmp(files) {
-  return Promise.all(files.map(async (filename) => {
-    const fullpath = toFixture(filename);
-    const tmpfile = path.join(tmpdir, filename);
-    await fs.copy(fullpath, tmpfile);
-    return tmpfile;
-  }));
-}
+const copyFixturesToTmp = files => Promise.all(files.map(async filename => {
+  const fullpath = toFixture(filename);
+  const tmpfile = path.join(tmpdir, filename);
+  await fs.copy(fullpath, tmpfile);
+  return tmpfile;
+}));
 
 async function gitInit(options) {
   options = options || {};
@@ -159,11 +157,12 @@ describe("setVersion sets version numbers in", () => {
   }
 
 
+    // eslint-disable-next-line no-shadow
   function test(name, files, version) {
     it(name, async () => {
       const tmpfiles = await setVersionTmp(files, version);
       assert.equal(tmpfiles.length, files.length);
-      await Promise.all(tmpfiles.map(async (file) => {
+      await Promise.all(tmpfiles.map(async file => {
         const v = await sync.getVersion(file);
         assert.equal(v.version, version);
       }));
@@ -360,9 +359,7 @@ describe("commiting files and creating tag", () => {
   });
 });
 
-function cleanOutput(output) {
-  return output.replace(/\033\[[0-9;]*m/g, "");
-}
+const cleanOutput = output => output.replace(/\033\[[0-9;]*m/g, "");
 
 describe("Runner", () => {
   after(() => del([tmpdir]));
@@ -497,7 +494,7 @@ describe("Runner", () => {
              async runner => assert.equal(await runner.verify(), "0.0.1"));
     makeTest("emits a message when there is no error", ["package.json"],
              runner => new Promise((resolve, reject) => {
-               runner.onMessage((msg) => {
+               runner.onMessage(msg => {
                  try {
                    assert.equal(
                      cleanOutput(msg),
@@ -520,7 +517,7 @@ amd.js:2: ${"0.9.0".red}
     makeTest("does not check package when bump = \"sync\"",
              ["package.json", "amd.js"],
              runner => new Promise((resolve, reject) => {
-               runner.onMessage((msg) => {
+               runner.onMessage(msg => {
                  try {
                    assert.equal(
                      cleanOutput(msg),
@@ -559,8 +556,8 @@ amd.js:2: ${"0.9.0".red}
     makeTest("fulfills when there is no error", ["package.json"],
              runner => runner.setVersion("9.9.9"));
     makeTest("emits a message when there is no error", ["package.json"],
-             runner => new Promise((resolve) => {
-               runner.onMessage((msg) => {
+             runner => new Promise(resolve => {
+               runner.onMessage(msg => {
                  assert.equal(
                    cleanOutput(msg),
                    "Version number was updated to 9.9.9 in package.json.");
@@ -569,7 +566,7 @@ amd.js:2: ${"0.9.0".red}
                runner.setVersion("9.9.9");
              }));
     makeTest("actually changes the version number", ["package.json"],
-             async (runner) => {
+             async runner => {
                await runner.setVersion("9.9.9");
                assert.equal((await sync.getVersion("package.json")).version,
                             "9.9.9");
@@ -613,7 +610,7 @@ amd.js:2: ${"0.9.0".red}
         bump: "minor",
       });
       const messages = [];
-      runner.onMessage((msg) => {
+      runner.onMessage(msg => {
         messages.push(cleanOutput(msg));
       });
 
@@ -630,7 +627,7 @@ amd.js:2: ${"0.9.0".red}
       const messages = [];
       const runner = new sync.Runner({
         bump: "minor",
-        onMessage: (msg) => {
+        onMessage: msg => {
           messages.push(cleanOutput(msg));
         },
       });
@@ -649,7 +646,7 @@ amd.js:2: ${"0.9.0".red}
       const messages = [];
       const runner = new sync.Runner({
         bump: "minor",
-        onMessage: [(msg) => {
+        onMessage: [msg => {
           messages.push(cleanOutput(msg));
         }],
       });
@@ -716,6 +713,7 @@ describe("run", () => {
 // "End-to-end" tests.
 describe("running versync", function runningVersync() {
   // Later versions of TS require a longer timeout!
+    // eslint-disable-next-line no-invalid-this
   this.timeout(3000);
   const options = { cwd: tmpdir };
 
@@ -746,7 +744,8 @@ describe("running versync", function runningVersync() {
   });
 
   it("bump", async () => {
-    const tmpfiles = await copyFixturesToTmp(["package.json", "component.json"]);
+    const tmpfiles =
+          await copyFixturesToTmp(["package.json", "component.json"]);
     await setVersionedSourcesInTmp(["component.json"]);
 
     assertGood(await execVersync("-b 0.2.0"), `\
@@ -763,7 +762,7 @@ describe("running versync", function runningVersync() {
     await copyFixturesToTmp(["package.json", "assigned.js", "es6.js"]);
 
     await setVersionedSourcesInTmp(["assigned.js", "es6.js"]);
-    await execVersync("-b sync", true).catch((err) => {
+    await execVersync("-b sync", true).catch(err => {
       assert.equal(cleanOutput(err.stdout), `\
 [OK] Version number in files to be synced is 0.0.7.
 [ERROR] Version in package.json (0.0.1) is lower than the version found in \
@@ -799,7 +798,7 @@ other files (0.0.7)
   it("verify failure", async () => {
     await copyFixturesToTmp(["package.json", "invalid.js", "invalid.ts"]);
 
-    await execVersync("-v -s invalid.js", true).catch((err) => {
+    await execVersync("-v -s invalid.js", true).catch(err => {
       assert.equal(cleanOutput(err.stdout),
                    "[ERROR] Invalid semver number in invalid.js. " +
                    "Found: version\n");
@@ -825,7 +824,7 @@ other files (0.0.7)
 
     await gitInit({ cwd: "tmp" });
 
-    await execVersync("-t", true).catch((err) => {
+    await execVersync("-t", true).catch(err => {
       assert.match(cleanOutput(err.stdout),
                    /^The option -t is not valid without -b/);
     });
@@ -855,7 +854,7 @@ M  package.json
 
     await gitInit({ cwd: "tmp" });
 
-    await execVersync("-a", true).catch((err) => {
+    await execVersync("-a", true).catch(err => {
       assert.match(cleanOutput(err.stdout),
                    /^The option -a is not valid without -b/);
     });

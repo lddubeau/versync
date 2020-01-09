@@ -99,11 +99,11 @@ if (argv.sources) {
 }
 
 const runner = new versync.Runner(argv);
-runner.onMessage((message) => {
+runner.onMessage(message => {
   console.log(`${SUCCESS}${message}`);
 });
 
-runner.run().catch((err) => {
+runner.run().catch(err => {
   console.log(`${ERROR}${err.message}`);
   if (err instanceof versync.ExecutionError) {
     console.log(`${ERROR}failed with code: ${err.originalError.code}`);

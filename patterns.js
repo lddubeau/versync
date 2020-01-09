@@ -2,13 +2,11 @@
 
 const esprima = require("esprima");
 
-function isObjectLiteral(node) {
-  return node.type === "ObjectExpression";
-}
+const isObjectLiteral = node => node.type === "ObjectExpression";
 
 function extractVersionProperty(properties) {
   let result;
-  properties.forEach((prop) => {
+  properties.forEach(prop => {
     if (prop.key.value === "version" || prop.key.name === "version") {
       result = prop.value;
       return false;
@@ -113,7 +111,7 @@ patterns.push(
 
 patterns.match = function match(source, node) {
   let result;
-  patterns.find((pattern) => {
+  patterns.find(pattern => {
     result = pattern(source, node);
     return result;
   });
@@ -133,7 +131,7 @@ function traverse(source, node) {
     if (node.body && node.body.length) {
       node = node.body;
     }
-    node.find((n) => {
+    node.find(n => {
       result = traverse(source, n);
       return result;
     });
@@ -142,7 +140,7 @@ function traverse(source, node) {
   }
 
   if (node.arguments && node.arguments.length) {
-    node.arguments.find((n) => {
+    node.arguments.find(n => {
       result = traverse(source, n);
       return result;
     });
