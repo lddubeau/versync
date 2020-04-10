@@ -9,7 +9,7 @@ const path = require("path");
 const mockery = require("mockery");
 const chai = require("chai");
 const { expectRejection, use } = require("expect-rejection");
-const sync = require("../");
+const sync = require("..");
 
 const { assert } = chai;
 
@@ -713,7 +713,7 @@ describe("run", () => {
 // "End-to-end" tests.
 describe("running versync", function runningVersync() {
   // Later versions of TS require a longer timeout!
-    // eslint-disable-next-line no-invalid-this
+  // eslint-disable-next-line no-invalid-this
   this.timeout(3000);
   const options = { cwd: tmpdir };
 

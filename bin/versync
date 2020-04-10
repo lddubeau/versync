@@ -4,7 +4,7 @@
 
 const fs = require("fs");
 const { ArgumentParser } = require("argparse");
-const versync = require("../");
+const versync = require("..");
 require("colors");
 
 /* eslint-disable no-console */
