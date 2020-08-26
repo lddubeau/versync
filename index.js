@@ -38,7 +38,6 @@ class InvalidVersionError extends Error {
 
 exports.InvalidVersionError = InvalidVersionError;
 
-
 class ExecutionError extends Error {
   constructor(message, originalError, stderr, stdout) {
     super(message);
@@ -51,7 +50,6 @@ class ExecutionError extends Error {
 }
 
 exports.ExecutionError = ExecutionError;
-
 
 // eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 function execFileAsync(command, args) {
@@ -253,7 +251,6 @@ exports.verify = async function verify(filenames) {
 
   return { consistent: true, versions };
 };
-
 
 /**
  * Sets the version number of a set of files. The files must already contain

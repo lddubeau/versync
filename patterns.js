@@ -118,7 +118,6 @@ patterns.match = function match(source, node) {
   return result;
 };
 
-
 function traverse(source, node) {
   let result = patterns.match(source, node);
   if (result) {

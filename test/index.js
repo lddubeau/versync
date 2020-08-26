@@ -127,7 +127,6 @@ describe("getValidVersion", () => {
      () => expectRejection(sync.getValidVersion(toFixture("invalid.js"))));
 });
 
-
 const tmpdir = "tmp";
 
 const copyFixturesToTmp = files => Promise.all(files.map(async filename => {
@@ -156,8 +155,7 @@ describe("setVersion sets version numbers in", () => {
     return sync.setVersion(tmpfiles, version).then(() => tmpfiles);
   }
 
-
-    // eslint-disable-next-line no-shadow
+  // eslint-disable-next-line no-shadow
   function test(name, files, version) {
     it(name, async () => {
       const tmpfiles = await setVersionTmp(files, version);
@@ -388,7 +386,6 @@ describe("Runner", () => {
         }
       });
     }
-
 
     makeTest("includes package.json by default", ["package.json"]);
     makeTest("includes files in versionedSources",
@@ -716,7 +713,6 @@ describe("running versync", function runningVersync() {
   // eslint-disable-next-line no-invalid-this
   this.timeout(3000);
   const options = { cwd: tmpdir };
-
 
   after(() => del([tmpdir]));
 
