@@ -39,7 +39,7 @@
     "@commitlint/cli": "^9.1.2",
     "@commitlint/config-angular": "^9.1.2",
     "chai": "^4.2.0",
-    "conventional-changelog-cli": "^2.1.0",
+    "conventional-changelog-cli": "^2.1.1",
     "del": "^5.1.0",
     "eslint": "^7.12.1",
     "eslint-config-lddubeau-base": "^6.0.0",
