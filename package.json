@@ -21,7 +21,7 @@
   ],
   "license": "MIT",
   "engines": {
-    "node": ">=12"
+    "node": ">=v12.22.7"
   },
   "repository": {
     "type": "git",
