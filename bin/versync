@@ -13,12 +13,12 @@ const ERROR = "[ERROR] ".bold.red;
 const SUCCESS = "[OK] ".bold.green;
 
 const parser = new ArgumentParser({
-  addHelp: true,
+  add_help: true,
   description: "Synchronizes version numbers accross package.json \
 and other source files of your choosing.",
 });
 
-parser.addArgument(["-b", "--bump"], {
+parser.add_argument("-b", "--bump", {
   help: "Bump the version number in the specified source files. It can take \
 one of the following values: \"major\", \"minor\", \"patch\". Or you can \
 use \"sync\" to copy the version numbers from package.json to the other files. \
@@ -27,7 +27,7 @@ one. If no value is specified, it defaults to \"patch\".",
   nargs: "?",
 });
 
-parser.addArgument(["-s", "--sources"], {
+parser.add_argument("-s", "--sources", {
   help: "Declare the JavaScript files in which the version number will be \
 updated. If this option is not used, the list of files is read from the \
 package.json \"versionedSources\" property. If the property is not present \
@@ -35,26 +35,26 @@ in the package.json and this option is not used, only package.json will be \
 synced. Optional.",
 });
 
-parser.addArgument(["-v", "--verify"], {
+parser.add_argument("-v", "--verify", {
   help: "Verifies that the sources have the same version number and checks \
 whether this version number conforms to the semver specification.",
-  action: "storeTrue",
+  action: "store_true",
 });
 
-parser.addArgument(["-a", "--add"], {
+parser.add_argument("-a", "--add", {
   help: "After bumping the version number, run `git add` on the versioned \
 files.",
-  action: "storeTrue",
+  action: "store_true",
 });
 
-parser.addArgument(["-t", "--tag"], {
+parser.add_argument("-t", "--tag", {
   help: "After bumping the version number, commit the changes and create a git \
 tag with the current version. (Note that using --add with this flag does \
 nothing more than using this flag alone.)",
-  action: "storeTrue",
+  action: "store_true",
 });
 
-const argv = parser.parseArgs();
+const argv = parser.parse_args();
 
 if (argv.tag && !argv.bump) {
   console.log("The option -t is not valid without -b.");
