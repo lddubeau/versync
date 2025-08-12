@@ -32,7 +32,7 @@
     "argparse": "^2.0.1",
     "colors": "^1.4.0",
     "esprima": "^4.0.1",
-    "fs-extra": "^10.1.0",
+    "fs-extra": "^11.3.1",
     "semver": "^7.7.2"
   },
   "devDependencies": {
